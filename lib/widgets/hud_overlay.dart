@@ -66,24 +66,28 @@ class HudOverlay extends StatelessWidget {
                 Row(
                   mainAxisSize: MainAxisSize.min,
                   children: List.generate(maxMistakes, (index) {
-                    final isLost = index < mistakes;
-                    return AnimatedContainer(
-                      duration: const Duration(milliseconds: 300),
-                      margin: const EdgeInsets.symmetric(horizontal: 4),
-                      width: isLost ? 8 : 24,
-                      height: 8,
-                      decoration: BoxDecoration(
-                        color: isLost 
-                            ? const Color(0xFFE0E0E0) // Greyed out
-                            : const Color(0xFF4CAF50), // Green life
-                        borderRadius: BorderRadius.circular(4),
-                        boxShadow: isLost ? null : [
-                          BoxShadow(
-                            color: const Color(0xFF4CAF50).withValues(alpha: 0.3),
-                            blurRadius: 4,
-                            offset: const Offset(0, 2),
-                          ),
-                        ],
+                    // Better UX: Lose stars from right to left
+                    final isLost = index >= (maxMistakes - mistakes);
+                    return Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 4.0),
+                      child: AnimatedSwitcher(
+                        duration: const Duration(milliseconds: 300),
+                        transitionBuilder: (Widget child, Animation<double> animation) {
+                          return FadeTransition(opacity: animation, child: ScaleTransition(scale: animation, child: child));
+                        },
+                        child: Icon(
+                          Icons.star_rounded,
+                          key: ValueKey(isLost),
+                          size: 24,
+                          color: isLost ? const Color(0xFFE0E0E0) : const Color(0xFF3A3A3A),
+                          shadows: isLost ? null : const [
+                            Shadow(
+                              color: Colors.black26,
+                              blurRadius: 4.0,
+                              offset: Offset(0, 2),
+                            ),
+                          ],
+                        ),
                       ),
                     );
                   }),

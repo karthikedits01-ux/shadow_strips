@@ -1,8 +1,10 @@
-import 'dart:math';
+import 'dart:math' as math;
+import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
-import 'package:confetti/confetti.dart';
+import '../logic/level_repository.dart';
+import '../models/strip.dart';
 
-class LevelCompletedOverlay extends StatefulWidget {
+class LevelCompletedOverlay extends StatelessWidget {
   final int nextLevelNum;
   final VoidCallback onNextLevel;
   final VoidCallback onRetry;
@@ -17,348 +19,371 @@ class LevelCompletedOverlay extends StatefulWidget {
   });
 
   @override
-  State<LevelCompletedOverlay> createState() => _LevelCompletedOverlayState();
-}
-
-class _LevelCompletedOverlayState extends State<LevelCompletedOverlay> with TickerProviderStateMixin {
-  late ConfettiController _confettiController;
-  late AnimationController _rotationController;
-  late AnimationController _entranceController;
-  late Animation<double> _fadeAnimation;
-
-  @override
-  void initState() {
-    super.initState();
-    _confettiController = ConfettiController(duration: const Duration(seconds: 10));
-    _confettiController.play();
-
-    _rotationController = AnimationController(
-      vsync: this,
-      duration: const Duration(seconds: 20),
-    )..repeat();
-    
-    _entranceController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 600),
-    );
-    
-    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(parent: _entranceController, curve: Curves.easeOut),
-    );
-    
-    _entranceController.forward();
-  }
-
-  @override
-  void dispose() {
-    _confettiController.dispose();
-    _rotationController.dispose();
-    _entranceController.dispose();
-    super.dispose();
-  }
-
-  @override
   Widget build(BuildContext context) {
-    return FadeTransition(
-      opacity: _fadeAnimation,
-      child: Material(
-      color: Colors.transparent,
-      child: Stack(
-        children: [
-          // Background Blue with Gradient
-          Positioned.fill(
-            child: Container(
-              decoration: const BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [Color(0xFF1E88E5), Color(0xFF1565C0)],
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
+    return TweenAnimationBuilder<double>(
+      // We animate a master value from 0.0 to 1.0. 
+      // We'll apply different curves manually inside the builder for different elements.
+      tween: Tween<double>(begin: 0.0, end: 1.0),
+      duration: const Duration(milliseconds: 1800), 
+      builder: (context, value, child) {
+        final t = value * 1800.0;
+
+        // 1. Fast Background Blur & UI Entrance (0 to 800ms)
+        final uiProgress = (t / 800.0).clamp(0.0, 1.0);
+        final elasticValue = Curves.elasticOut.transform(uiProgress);
+        final uiFade = Curves.easeIn.transform(uiProgress).clamp(0.0, 1.0);
+        final uiSlide = Curves.easeOutCubic.transform(uiProgress);
+        final mapSlideScale = Curves.easeOutCubic.transform(uiProgress);
+        
+        final blurValue = Curves.easeOut.transform(uiProgress).clamp(0.0, 1.0);
+
+        // 2. Map Shrink - Sharp Magnetic Snap (1000ms to 1250ms)
+        final shrinkProgress = ((t - 1000.0) / 250.0).clamp(0.0, 1.0);
+        final mapScale = (1.0 - Curves.easeInExpo.transform(shrinkProgress)).clamp(0.0, 1.0);
+
+        // 3. Ripple Burst (1250ms to 1650ms)
+        final isRippleActive = t > 1250.0 && t < 1650.0;
+        final rippleProgress = ((t - 1250.0) / 400.0).clamp(0.0, 1.0);
+        final rippleScale = 2.0 * Curves.easeOutQuad.transform(rippleProgress);
+        final rippleOpacity = (1.0 - rippleProgress).clamp(0.0, 1.0);
+
+        // 4. Checkmark Scale (1250ms to 1750ms)
+        final checkProgress = ((t - 1250.0) / 500.0).clamp(0.0, 1.0);
+        final checkScale = Curves.elasticOut.transform(checkProgress);
+
+        return Material(
+          color: Colors.transparent,
+          child: Stack(
+            children: [
+              // True Frosted Glass with Dark Tint
+              Positioned.fill(
+                child: BackdropFilter(
+                  filter: ui.ImageFilter.blur(
+                    sigmaX: 15.0 * blurValue,
+                    sigmaY: 15.0 * blurValue,
+                  ),
+                  child: Container(
+                    color: Colors.black.withValues(alpha: 0.6 * blurValue),
+                  ),
                 ),
               ),
-            ),
-          ),
-          
-          // Rotating Sunburst Rays
-          Positioned.fill(
-            child: AnimatedBuilder(
-              animation: _rotationController,
-              builder: (context, child) {
-                return CustomPaint(
-                  painter: _SunburstPainter(rotation: _rotationController.value * 2 * pi),
-                );
-              },
-            ),
-          ),
 
-          // Confetti
-          Align(
-            alignment: Alignment.topCenter,
-            child: ConfettiWidget(
-              confettiController: _confettiController,
-              blastDirection: pi / 2, // fall straight down
-              maxBlastForce: 5,
-              minBlastForce: 2,
-              emissionFrequency: 0.05,
-              numberOfParticles: 20,
-              gravity: 0.2,
-              colors: const [
-                Colors.green,
-                Colors.blue,
-                Colors.pink,
-                Colors.orange,
-                Colors.purple,
-                Colors.yellow,
-                Colors.cyan
-              ],
-            ),
-          ),
-
-          // Content
-          SafeArea(
-            child: Column(
-              children: [
-                const SizedBox(height: 60),
-                // Title
-                const Text(
-                  'CLEARED',
-                  style: TextStyle(
-                    fontSize: 36,
-                    fontWeight: FontWeight.w800,
-                    color: Colors.white,
-                    shadows: [
-                      Shadow(
-                        color: Colors.black26,
-                        offset: Offset(0, 4),
-                        blurRadius: 8,
-                      ),
-                    ],
-                  ),
-                ),
-                const Spacer(),
-
-                // Center Icon Card
-                Container(
-                  width: 220,
-                  height: 220,
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(24),
-                    boxShadow: const [
-                      BoxShadow(
-                        color: Colors.black26,
-                        offset: Offset(0, 10),
-                        blurRadius: 30,
-                      ),
-                    ],
-                  ),
-                  child: CustomPaint(
-                    painter: _ArrowsPainter(),
-                  ),
-                ),
-
-                const Spacer(),
-
-                // Next Game Button
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 40),
-                  child: Container(
-                    decoration: BoxDecoration(
-                      boxShadow: const [
-                        BoxShadow(
-                          color: Colors.black12,
-                          offset: Offset(0, 4),
-                          blurRadius: 10,
-                        ),
-                      ],
-                      borderRadius: BorderRadius.circular(40),
-                    ),
-                    child: ElevatedButton(
-                      onPressed: widget.onNextLevel,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.white,
-                        foregroundColor: const Color(0xFF1E88E5),
-                        elevation: 0,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(40),
-                        ),
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                        minimumSize: const Size(double.infinity, 0),
-                      ),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const Text(
-                            'Next Game',
-                            style: TextStyle(
-                              fontSize: 20,
-                              fontWeight: FontWeight.bold,
-                              color: Color(0xFF1E88E5),
-                            ),
-                          ),
-                          Text(
-                            'Level ${widget.nextLevelNum}',
-                            style: const TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w500,
-                              color: Color(0xFF64B5F6),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-
-                const SizedBox(height: 24),
-
-                // Retry and Levels Buttons
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
+              // Background is clean, no shockwave.
+              
+              // Content
+              SafeArea(
+                child: Column(
                   children: [
-                    TextButton(
-                      onPressed: widget.onRetry,
-                      style: TextButton.styleFrom(
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                      ),
+                    const Spacer(flex: 2),
+
+                    // Bouncing Hero Text with Metallic/Neon Glow
+                    Transform.scale(
+                      scale: elasticValue.clamp(0.0, double.infinity),
                       child: const Text(
-                        'RETRY',
+                        'CLEARED',
                         style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
+                          fontSize: 48,
+                          fontWeight: FontWeight.w900,
+                          color: Colors.white,
+                          letterSpacing: 12.0,
+                          shadows: [
+                            Shadow(
+                              color: Color(0xFFFFD700), // Gold metallic glow
+                              blurRadius: 30,
+                              offset: Offset(0, 0),
+                            ),
+                            Shadow(
+                              color: Colors.white,
+                              blurRadius: 10,
+                              offset: Offset(0, 0),
+                            ),
+                          ],
                         ),
                       ),
                     ),
-                    const SizedBox(width: 16),
-                    TextButton(
-                      onPressed: widget.onLevels,
-                      style: TextButton.styleFrom(
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                      ),
-                      child: const Text(
-                        'LEVELS',
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
+
+                    const Spacer(flex: 2),
+
+                    // Miniature Map Card
+                    Transform.scale(
+                      scale: 0.8 + (0.2 * mapSlideScale),
+                      child: Opacity(
+                        opacity: uiFade,
+                        child: Container(
+                          width: 220,
+                          height: 220,
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF2A2A2A).withValues(alpha: 0.85),
+                            borderRadius: BorderRadius.circular(24),
+                            border: Border.all(
+                              color: Colors.white.withValues(alpha: 0.1),
+                              width: 1,
+                            ),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withValues(alpha: 0.3),
+                                offset: const Offset(0, 16),
+                                blurRadius: 32,
+                              ),
+                            ],
+                          ),
+                          child: Stack(
+                            alignment: Alignment.center,
+                            children: [
+                              if (isRippleActive)
+                                Transform.scale(
+                                  scale: rippleScale,
+                                  child: Container(
+                                    width: 100,
+                                    height: 100,
+                                    decoration: BoxDecoration(
+                                      shape: BoxShape.circle,
+                                      color: Colors.white.withValues(alpha: rippleOpacity * 0.5),
+                                    ),
+                                  ),
+                                ),
+                              if (mapScale > 0)
+                                Transform.scale(
+                                  scale: mapScale,
+                                  child: CustomPaint(
+                                    size: const Size(220, 220),
+                                    painter: _MiniMapPainter(
+                                      strips: LevelRepository.getLevel('level_${nextLevelNum - 1}').strips,
+                                    ),
+                                  ),
+                                ),
+                              if (checkScale > 0)
+                                Transform.scale(
+                                  scale: checkScale,
+                                  child: const Icon(
+                                    Icons.check_rounded,
+                                    color: Colors.white,
+                                    size: 100,
+                                    shadows: [
+                                      Shadow(
+                                        color: Colors.white54,
+                                        blurRadius: 24,
+                                      ),
+                                      Shadow(
+                                        color: Colors.white,
+                                        blurRadius: 8,
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                            ],
+                          ),
                         ),
                       ),
                     ),
+
+                    const Spacer(flex: 3),
+
+                    // Floating Controls
+                    Opacity(
+                      opacity: uiFade,
+                      child: Transform.translate(
+                        offset: Offset(0, 40 * (1.0 - uiSlide)),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            // Next Game Button
+                            Padding(
+                              padding: const EdgeInsets.symmetric(horizontal: 40),
+                              child: Container(
+                                decoration: BoxDecoration(
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: const Color(0xFFFFD700).withValues(alpha: 0.2),
+                                      offset: const Offset(0, 8),
+                                      blurRadius: 20,
+                                    ),
+                                  ],
+                                  borderRadius: BorderRadius.circular(40),
+                                ),
+                                child: ElevatedButton(
+                                  onPressed: onNextLevel,
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: Colors.white,
+                                    foregroundColor: Colors.black,
+                                    elevation: 0,
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(40),
+                                    ),
+                                    padding: const EdgeInsets.symmetric(vertical: 18),
+                                    minimumSize: const Size(double.infinity, 0),
+                                  ),
+                                  child: Column(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      const Text(
+                                        'NEXT GAME',
+                                        style: TextStyle(
+                                          fontSize: 20,
+                                          fontWeight: FontWeight.w900,
+                                          color: Color(0xFF1E1E1E),
+                                          letterSpacing: 1.5,
+                                        ),
+                                      ),
+                                      Text(
+                                        'Level $nextLevelNum',
+                                        style: const TextStyle(
+                                          fontSize: 14,
+                                          fontWeight: FontWeight.w600,
+                                          color: Color(0xFF6E6E73),
+                                          letterSpacing: 1.0,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ),
+
+                            const SizedBox(height: 24),
+
+                            // Retry and Levels Buttons
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                TextButton(
+                                  onPressed: onRetry,
+                                  style: TextButton.styleFrom(
+                                    foregroundColor: Colors.white70,
+                                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                                  ),
+                                  child: const Text(
+                                    'RETRY',
+                                    style: TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.bold,
+                                      letterSpacing: 2.0,
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 16),
+                                TextButton(
+                                  onPressed: onLevels,
+                                  style: TextButton.styleFrom(
+                                    foregroundColor: Colors.white70,
+                                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                                  ),
+                                  child: const Text(
+                                    'LEVELS',
+                                    style: TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.bold,
+                                      letterSpacing: 2.0,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    
+                    const SizedBox(height: 40),
                   ],
                 ),
-                const SizedBox(height: 40),
-              ],
-            ),
+              ),
+            ],
           ),
-        ],
-      ),
-    ),
+        );
+      },
     );
   }
 }
 
-class _SunburstPainter extends CustomPainter {
-  final double rotation;
+// Shockwave painter removed for a cleaner Apple/Tesla minimalist style.
 
-  _SunburstPainter({required this.rotation});
+class _MiniMapPainter extends CustomPainter {
+  final List<Strip> strips;
+
+  _MiniMapPainter({required this.strips});
 
   @override
   void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = Colors.white.withValues(alpha: 0.08)
-      ..style = PaintingStyle.fill;
+    if (strips.isEmpty) return;
 
-    final center = Offset(size.width / 2, size.height / 2);
-    final radius = max(size.width, size.height);
-    const int numRays = 24;
-    const double anglePerRay = (2 * pi) / numRays;
+    double minX = double.infinity;
+    double minY = double.infinity;
+    double maxX = double.negativeInfinity;
+    double maxY = double.negativeInfinity;
 
-    canvas.save();
-    canvas.translate(center.dx, center.dy);
-    canvas.rotate(rotation);
-
-    for (int i = 0; i < numRays; i++) {
-      if (i % 2 == 0) {
-        final path = Path();
-        path.moveTo(0, 0);
-        path.lineTo(radius * cos(i * anglePerRay), radius * sin(i * anglePerRay));
-        path.lineTo(radius * cos((i + 1) * anglePerRay), radius * sin((i + 1) * anglePerRay));
-        path.close();
-        canvas.drawPath(path, paint);
+    for (final strip in strips) {
+      final halfWidth = strip.width / 2;
+      for (final point in strip.points) {
+        if (point.dx - halfWidth < minX) minX = point.dx - halfWidth;
+        if (point.dy - halfWidth < minY) minY = point.dy - halfWidth;
+        if (point.dx + halfWidth > maxX) maxX = point.dx + halfWidth;
+        if (point.dy + halfWidth > maxY) maxY = point.dy + halfWidth;
       }
     }
 
-    canvas.restore();
-  }
+    final actualWidth = maxX - minX;
+    final actualHeight = maxY - minY;
+    
+    if (actualWidth <= 0 || actualHeight <= 0) return;
 
-  @override
-  bool shouldRepaint(covariant _SunburstPainter oldDelegate) {
-    return oldDelegate.rotation != rotation;
-  }
-}
+    final padding = 20.0;
+    final availableWidth = size.width - padding * 2;
+    final availableHeight = size.height - padding * 2;
 
-class _ArrowsPainter extends CustomPainter {
-  @override
-  void paint(Canvas canvas, Size size) {
+    final scaleX = availableWidth / actualWidth;
+    final scaleY = availableHeight / actualHeight;
+    final scale = math.min(scaleX, scaleY);
+
+    final offsetX = (size.width - actualWidth * scale) / 2.0;
+    final offsetY = (size.height - actualHeight * scale) / 2.0;
+
+    canvas.translate(offsetX - minX * scale, offsetY - minY * scale);
+    canvas.scale(scale);
+
     final paint = Paint()
-      ..color = const Color(0xFF1C1C1E)
-      ..strokeWidth = 6
-      ..strokeCap = StrokeCap.round
-      ..style = PaintingStyle.stroke;
-
-    final center = Offset(size.width / 2, size.height / 2);
-    final arrowLength = size.height * 0.45;
-    final spacing = size.width * 0.2;
-
-    _drawArrow(canvas, Offset(center.dx - spacing, center.dy), arrowLength, true, paint);
-    _drawArrow(canvas, Offset(center.dx, center.dy), arrowLength, true, paint);
-    _drawArrow(canvas, Offset(center.dx + spacing, center.dy), arrowLength, false, paint);
-    
-    // Add small yellow highlight like the image
-    final highlightPaint = Paint()
-      ..color = const Color(0xFFFFD54F)
-      ..strokeWidth = 12
-      ..strokeCap = StrokeCap.round
-      ..style = PaintingStyle.stroke;
-      
-    // Draw a small yellow highlight on the right arrow
-    canvas.drawLine(
-       Offset(center.dx + spacing, center.dy),
-       Offset(center.dx + spacing, center.dy + 10),
-       highlightPaint,
-    );
-  }
-
-  void _drawArrow(Canvas canvas, Offset center, double length, bool up, Paint paint) {
-    final startY = center.dy + (up ? length / 2 : -length / 2);
-    final endY = center.dy + (up ? -length / 2 : length / 2);
-    
-    canvas.drawLine(Offset(center.dx, startY), Offset(center.dx, endY), paint);
-
-    // Arrowhead
-    final headSize = 12.0;
-    final path = Path();
-    if (up) {
-      path.moveTo(center.dx - headSize, endY + headSize);
-      path.lineTo(center.dx, endY);
-      path.lineTo(center.dx + headSize, endY + headSize);
-    } else {
-      path.moveTo(center.dx - headSize, endY - headSize);
-      path.lineTo(center.dx, endY);
-      path.lineTo(center.dx + headSize, endY - headSize);
-    }
-    
-    // Switch to fill for the arrowhead
-    final fillPaint = Paint()
-      ..color = paint.color
+      ..color = Colors.white
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 6
       ..strokeCap = StrokeCap.round
-      ..strokeJoin = StrokeJoin.round;
+      ..strokeJoin = StrokeJoin.round
+      ..strokeWidth = 3.0 / scale;
+
+    for (final strip in strips) {
+      if (strip.points.isEmpty) continue;
       
-    canvas.drawPath(path, fillPaint);
+      final path = Path();
+      path.moveTo(strip.points.first.dx, strip.points.first.dy);
+      for (int i = 1; i < strip.points.length; i++) {
+        path.lineTo(strip.points[i].dx, strip.points[i].dy);
+      }
+      
+      canvas.drawPath(path, paint);
+      
+      if (strip.points.length >= 2) {
+        final p1 = strip.points[strip.points.length - 2];
+        final p2 = strip.points.last;
+        final angle = math.atan2(p2.dy - p1.dy, p2.dx - p1.dx);
+        
+        final arrowSize = 10.0 / scale;
+        
+        final arrowPath = Path();
+        arrowPath.moveTo(
+          p2.dx - arrowSize * math.cos(angle - math.pi / 6),
+          p2.dy - arrowSize * math.sin(angle - math.pi / 6),
+        );
+        arrowPath.lineTo(p2.dx, p2.dy);
+        arrowPath.lineTo(
+          p2.dx - arrowSize * math.cos(angle + math.pi / 6),
+          p2.dy - arrowSize * math.sin(angle + math.pi / 6),
+        );
+        
+        canvas.drawPath(arrowPath, paint);
+      }
+    }
   }
 
   @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+  bool shouldRepaint(covariant _MiniMapPainter oldDelegate) {
+    return oldDelegate.strips != strips;
+  }
 }
