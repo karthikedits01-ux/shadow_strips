@@ -105,27 +105,24 @@ class PuzzlePainter extends CustomPainter {
   void _paintStrip(Canvas canvas, Strip strip, List<Strip> activeStrips) {
     final stripState = state.stripStates[strip.id];
 
-    // Only paint if not fully removed. (State map tracking logic)
     if (stripState == StripState.removed) return;
 
-    final path = StripGeometry.buildStripPath(strip);
+    final removalValue = removalAnimations[strip.id] ?? 0.0;
+    
+    // 1. Use the Slithering Path if it's being removed
+    final path = removalValue > 0 
+        ? StripGeometry.buildSlitheringPath(strip, removalValue) 
+        : StripGeometry.buildStripPath(strip);
 
     canvas.saveLayer(null, Paint()); // Use SaveLayer to mask shadows cleanly
 
-    // 1. Apply Removal Animation Transform (Scale down and Fade out)
-    final removalValue = removalAnimations[strip.id] ?? 0.0;
+    // We no longer scale down and fade out. The slithering path takes care of the exit!
     int alpha = 255;
     if (removalValue > 0) {
-      final bounds = path.getBounds();
-      final centerX = bounds.center.dx;
-      final centerY = bounds.center.dy;
-
-      canvas.translate(centerX, centerY);
-      final scale = 1.0 - (removalValue * 0.2); // Scale down to 0.8
-      canvas.scale(scale, scale);
-      canvas.translate(-centerX, -centerY);
-
-      alpha = (255 * (1.0 - removalValue)).toInt();
+      // Fade out slightly at the very end of the animation to ensure clean cleanup
+      if (removalValue > 0.8) {
+        alpha = (255 * (1.0 - (removalValue - 0.8) * 5)).toInt().clamp(0, 255);
+      }
     }
 
     // 2. Apply Error Animation Transform (wiggle on collision)
@@ -158,9 +155,17 @@ class PuzzlePainter extends CustomPainter {
       ..strokeJoin = StrokeJoin.round;
     canvas.drawPath(path, darkPaint);
 
+    // Dynamic colors for Red-Flash Error Feedback
+    Color baseMid = const Color(0xFF1A1A1C);
+    Color baseCenter = const Color(0xFF2C2C2E);
+    if (errorValue > 0) {
+      baseMid = Color.lerp(baseMid, Colors.red[900], errorValue)!;
+      baseCenter = Color.lerp(baseCenter, Colors.redAccent[400], errorValue)!;
+    }
+
     // Mid-light (middle layer)
     final midPaint = Paint()
-      ..color = const Color(0xFF1A1A1C).withAlpha(alpha)
+      ..color = baseMid.withAlpha(alpha)
       ..style = PaintingStyle.stroke
       ..strokeWidth = w * 0.7
       ..strokeCap = StrokeCap.round
@@ -169,12 +174,39 @@ class PuzzlePainter extends CustomPainter {
 
     // Highlight (inner center layer)
     final centerPaint = Paint()
-      ..color = const Color(0xFF2C2C2E).withAlpha(alpha)
+      ..color = baseCenter.withAlpha(alpha)
       ..style = PaintingStyle.stroke
       ..strokeWidth = w * 0.3
       ..strokeCap = StrokeCap.round
       ..strokeJoin = StrokeJoin.round;
     canvas.drawPath(path, centerPaint);
+
+    // Draw Premium Arrowhead (Only when not sliding)
+    if (removalValue == 0 && strip.points.length >= 2) {
+      final head = strip.points.last;
+      final preHead = strip.points[strip.points.length - 2];
+      Offset dir = head - preHead;
+      double dirLen = dir.distance;
+      if (dirLen > 0) {
+        dir = dir / dirLen;
+        final arrowSize = w * 0.35;
+        // Shift arrowhead slightly back so it doesn't clip the rounded end
+        final arrowTip = head - dir * (w * 0.2); 
+        final p1 = arrowTip - dir * arrowSize + Offset(-dir.dy, dir.dx) * arrowSize;
+        final p3 = arrowTip - dir * arrowSize - Offset(-dir.dy, dir.dx) * arrowSize;
+        
+        final arrowPath = Path()..moveTo(p1.dx, p1.dy)..lineTo(arrowTip.dx, arrowTip.dy)..lineTo(p3.dx, p3.dy);
+        
+        final arrowPaint = Paint()
+          ..color = errorValue > 0 ? Colors.redAccent[100]!.withAlpha(alpha) : const Color(0xFF6E6E73).withAlpha(alpha)
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 2.5
+          ..strokeCap = StrokeCap.round
+          ..strokeJoin = StrokeJoin.round;
+          
+        canvas.drawPath(arrowPath, arrowPaint);
+      }
+    }
 
     // 4. Draw Shadows from higher strips onto THIS strip using SrcATop so it only paints over the strip
     canvas.saveLayer(null, Paint()..blendMode = BlendMode.srcATop);

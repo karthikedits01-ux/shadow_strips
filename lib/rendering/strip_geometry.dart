@@ -18,6 +18,69 @@ class StripGeometry {
     return path;
   }
 
+  static Path buildSlitheringPath(Strip strip, double progress) {
+    if (strip.points.isEmpty) return Path();
+    if (strip.points.length == 1) {
+      final p = strip.points.first;
+      return Path()..moveTo(p.dx, p.dy)..lineTo(p.dx, p.dy);
+    }
+    
+    final head = strip.points.last;
+    final preHead = strip.points[strip.points.length - 2];
+    
+    Offset dir = head - preHead;
+    double dirLen = dir.distance;
+    if (dirLen == 0) {
+      dir = const Offset(1, 0); 
+    } else {
+      dir = dir / dirLen;
+    }
+    
+    double totalLength = 0;
+    final lengths = <double>[0];
+    for (int i = 1; i < strip.points.length; i++) {
+      final d = (strip.points[i] - strip.points[i-1]).distance;
+      totalLength += d;
+      lengths.add(totalLength);
+    }
+    
+    // The strip slides out completely. 1500 logical pixels guarantees it goes offscreen.
+    final slideDistance = progress * (totalLength + 1500.0);
+    final startDist = slideDistance; // Tail
+    final endDist = slideDistance + totalLength; // Head
+    
+    final path = Path();
+    
+    Offset getPointAtDistance(double d) {
+      if (d <= 0) return strip.points.first;
+      if (d >= totalLength) {
+        final extra = d - totalLength;
+        return head + dir * extra;
+      }
+      for (int i = 1; i < strip.points.length; i++) {
+        if (d <= lengths[i]) {
+          final t = (d - lengths[i-1]) / (lengths[i] - lengths[i-1]);
+          return Offset.lerp(strip.points[i-1], strip.points[i], t)!;
+        }
+      }
+      return head; 
+    }
+    
+    final tailPos = getPointAtDistance(startDist);
+    path.moveTo(tailPos.dx, tailPos.dy);
+    
+    for (int i = 1; i < strip.points.length; i++) {
+      if (lengths[i] > startDist && lengths[i] < endDist) {
+        path.lineTo(strip.points[i].dx, strip.points[i].dy);
+      }
+    }
+    
+    final headPos = getPointAtDistance(endDist);
+    path.lineTo(headPos.dx, headPos.dy);
+    
+    return path;
+  }
+
   /// Calculates the bounding box containing all strips in a level
   static Rect getLevelBounds(List<Strip> strips) {
     if (strips.isEmpty) return Rect.zero;

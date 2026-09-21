@@ -9,13 +9,65 @@ import '../models/level_metadata.dart';
 /// Provides the curated levels for the game.
 class LevelRepository {
   static PuzzleLevel getLevel(String id) {
+    PuzzleLevel level;
     if (id.startsWith('level_')) {
       final intLevel = int.tryParse(id.split('_')[1]);
       if (intLevel != null) {
-        return _buildLevel(intLevel);
+        level = _buildLevel(intLevel);
+      } else {
+        level = _buildLevel(1).copyWith(levelId: id); 
+      }
+    } else {
+      level = _buildLevel(1).copyWith(levelId: id); 
+    }
+
+    final orientedStrips = _orientStripsOutward(level.strips);
+    return level.copyWith(strips: orientedStrips);
+  }
+
+  static List<Strip> _orientStripsOutward(List<Strip> strips) {
+    if (strips.isEmpty) return strips;
+    
+    double minX = double.infinity, minY = double.infinity;
+    double maxX = double.negativeInfinity, maxY = double.negativeInfinity;
+    
+    for (final strip in strips) {
+      for (final p in strip.points) {
+        if (p.dx < minX) minX = p.dx;
+        if (p.dy < minY) minY = p.dy;
+        if (p.dx > maxX) maxX = p.dx;
+        if (p.dy > maxY) maxY = p.dy;
       }
     }
-    return _buildLevel(1).copyWith(levelId: id); 
+    
+    final levelCenter = Offset((minX + maxX) / 2, (minY + maxY) / 2);
+    
+    final orientedStrips = <Strip>[];
+    for (final strip in strips) {
+      if (strip.points.length >= 2) {
+        final head = strip.points.last;
+        final tail = strip.points.first;
+        
+        final headDist = (head - levelCenter).distanceSquared;
+        final tailDist = (tail - levelCenter).distanceSquared;
+        
+        // Ensure points.last is the end pointing away from the center
+        if (tailDist > headDist) {
+          orientedStrips.add(Strip(
+            id: strip.id,
+            points: strip.points.reversed.toList(),
+            width: strip.width,
+            zIndex: strip.zIndex,
+          ));
+        } else {
+          orientedStrips.add(strip);
+        }
+      } else {
+        orientedStrips.add(strip);
+      }
+    }
+    
+    return orientedStrips;
   }
 
   static PuzzleLevel _buildLevel(int levelIndex) {
@@ -206,55 +258,58 @@ class LevelRepository {
     );
   }
 
-  /// LEVEL 3: PRODUCTION (BRANCHING DEPENDENCY)
-  /// - 4 straight strips. A -> B -> (C, D).
+  /// LEVEL 3: PRODUCTION (DOUBLE ANCHOR) [Replaced with Level 12]
+  /// - 5 strips. One continuous bent strip (A) blocked by two independent straight strips (B, C).
+  /// - B -> A, C -> A, A -> D, D -> E.
   static PuzzleLevel _buildLevel3() {
     const double w = 40.0;
     final strips = const [
-      // D: Vertical, right
-      Strip(id: 'D', points: [Offset(700, 300), Offset(700, 700)], width: w, zIndex: 1),
-      // C: Vertical, left
-      Strip(id: 'C', points: [Offset(300, 300), Offset(300, 700)], width: w, zIndex: 2),
-      // B: Horizontal, middle
-      Strip(id: 'B', points: [Offset(200, 500), Offset(800, 500)], width: w, zIndex: 3),
-      // A: Vertical, center
-      Strip(id: 'A', points: [Offset(500, 200), Offset(500, 800)], width: w, zIndex: 4),
+      // E: Vertical, right-most base
+      Strip(id: 'E', points: [Offset(700, 400), Offset(700, 800)], width: w, zIndex: 1),
+      // D: Horizontal, supporting A and crossing E
+      Strip(id: 'D', points: [Offset(400, 600), Offset(800, 600)], width: w, zIndex: 2),
+      // A: L-shaped continuous bent strip
+      Strip(id: 'A', points: [Offset(200, 300), Offset(500, 300), Offset(500, 700)], width: w, zIndex: 3),
+      // C: Vertical, crossing the horizontal leg of A
+      Strip(id: 'C', points: [Offset(300, 150), Offset(300, 450)], width: w, zIndex: 4),
+      // B: Horizontal, crossing the vertical leg of A
+      Strip(id: 'B', points: [Offset(400, 450), Offset(650, 450)], width: w, zIndex: 5),
     ];
-    // A crosses B at (500, 500) -> A blocks B
-    // B crosses C at (300, 500) -> B blocks C
-    // B crosses D at (700, 500) -> B blocks D
 
     final crossings = _calculateCrossings(strips);
     return PuzzleLevel(
       levelId: 'level_3',
-      metadata: LevelMetadata(difficulty: 3, stripCount: 4, crossingCount: crossings.length, gridType: 'production_3'),
+      metadata: LevelMetadata(difficulty: 3, stripCount: 5, crossingCount: crossings.length, gridType: 'production_12'),
       strips: strips,
       crossings: crossings,
     );
   }
 
-  /// LEVEL 4: PRODUCTION (WHOLE OBJECT VERIFICATION)
-  /// - 4 straight strips. C -> A, A -> B, C -> D.
+  /// LEVEL 4: SPLIT DECISION [Replaced with Level 15]
+  /// - 6 strips. One bent strip (A).
+  /// - Dependency: A -> D, B -> D, A -> E, C -> E, D -> F, E -> F.
+  /// - A, B, C are initially free.
   static PuzzleLevel _buildLevel4() {
-    const double w = 40.0;
+    const double w = 32.0; // Reduced thickness significantly
     final strips = const [
-      // D: Vertical, left
-      Strip(id: 'D', points: [Offset(300, 200), Offset(300, 800)], width: w, zIndex: 1),
-      // B: Horizontal, middle-right (doesn't reach D)
-      Strip(id: 'B', points: [Offset(500, 500), Offset(900, 500)], width: w, zIndex: 2),
-      // A: Vertical, right
-      Strip(id: 'A', points: [Offset(700, 200), Offset(700, 800)], width: w, zIndex: 3),
-      // C: Horizontal, top (crosses both A and D)
-      Strip(id: 'C', points: [Offset(200, 300), Offset(900, 300)], width: w, zIndex: 4),
+      // F: Horizontal base strip at the bottom
+      Strip(id: 'F', points: [Offset(210, 740), Offset(790, 740)], width: w, zIndex: 1),
+      // D: Left vertical pillar
+      Strip(id: 'D', points: [Offset(330, 260), Offset(330, 790)], width: w, zIndex: 2),
+      // E: Right vertical pillar
+      Strip(id: 'E', points: [Offset(670, 260), Offset(670, 790)], width: w, zIndex: 3),
+      // A: Large L-shaped strip crossing both pillars
+      Strip(id: 'A', points: [Offset(210, 520), Offset(790, 520), Offset(790, 210)], width: w, zIndex: 4),
+      // B: Short horizontal strip crossing left pillar
+      Strip(id: 'B', points: [Offset(210, 630), Offset(450, 630)], width: w, zIndex: 5),
+      // C: Short horizontal strip crossing right pillar
+      Strip(id: 'C', points: [Offset(550, 630), Offset(790, 630)], width: w, zIndex: 6),
     ];
-    // C crosses A at (700, 300) -> C blocks A
-    // A crosses B at (700, 500) -> A blocks B
-    // C crosses D at (300, 300) -> C blocks D
 
     final crossings = _calculateCrossings(strips);
     return PuzzleLevel(
       levelId: 'level_4',
-      metadata: LevelMetadata(difficulty: 4, stripCount: 4, crossingCount: crossings.length, gridType: 'production_4'),
+      metadata: LevelMetadata(difficulty: 4, stripCount: 6, crossingCount: crossings.length, gridType: 'topological_15'),
       strips: strips,
       crossings: crossings,
     );

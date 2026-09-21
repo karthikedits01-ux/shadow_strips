@@ -111,14 +111,14 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
   void _startRemovalAnimation(String stripId) {
     final controller = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 150), // Snappy 150ms
+      duration: const Duration(milliseconds: 600), // Smooth slithering 600ms
     );
 
     _removalControllers[stripId] = controller;
 
     controller.addListener(() {
       setState(() {
-        _removalValues[stripId] = controller.value;
+        _removalValues[stripId] = Curves.easeInOutCubic.transform(controller.value);
       });
     });
 
