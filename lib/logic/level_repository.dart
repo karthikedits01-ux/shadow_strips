@@ -501,28 +501,51 @@ class LevelRepository {
     );
   }
 
-  /// LEVEL 12: PRODUCTION (DOUBLE ANCHOR)
-  /// - 5 strips. One continuous bent strip (A) blocked by two independent straight strips (B, C).
-  /// - B -> A, C -> A, A -> D, D -> E.
+  /// LEVEL 12: LABYRINTH TRAP
+  /// - 10 strips total: 6 straight pins and 4 complex multi-segment hooks.
+  /// - A deeply interwoven Z-index structure forces a 10-step sequential solve.
+  /// - Exactly ONE strip is free at any given time.
   static PuzzleLevel _buildLevel12() {
-    const double w = 40.0;
+    const double w = 38.0;
+    
+    // Z-Indexes are strictly ordered from 100 down to 10.
+    // Each strip uniquely blocks the strip immediately below it in the hierarchy.
     final strips = const [
-      // E: Vertical, right-most base
-      Strip(id: 'E', points: [Offset(700, 400), Offset(700, 800)], width: w, zIndex: 1),
-      // D: Horizontal, supporting A and crossing E
-      Strip(id: 'D', points: [Offset(400, 600), Offset(800, 600)], width: w, zIndex: 2),
-      // A: L-shaped continuous bent strip
-      Strip(id: 'A', points: [Offset(200, 300), Offset(500, 300), Offset(500, 700)], width: w, zIndex: 3),
-      // C: Vertical, crossing the horizontal leg of A
-      Strip(id: 'C', points: [Offset(300, 150), Offset(300, 450)], width: w, zIndex: 4),
-      // B: Horizontal, crossing the vertical leg of A
-      Strip(id: 'B', points: [Offset(400, 450), Offset(650, 450)], width: w, zIndex: 5),
+      // Step 1: Z=100 (Free)
+      Strip(id: 'V1_TOP', points: [Offset(450, 50), Offset(450, 950)], width: w, zIndex: 100),
+      
+      // Step 2: Z=90 (Blocked by V1_TOP) - U-Shape
+      Strip(id: 'HOOK_U1', points: [Offset(350, 350), Offset(350, 550), Offset(550, 550), Offset(550, 150)], width: w, zIndex: 90),
+      
+      // Step 3: Z=80 (Blocked by HOOK_U1) - Horizontal Pin
+      Strip(id: 'H1_MID', points: [Offset(50, 450), Offset(950, 450)], width: w, zIndex: 80),
+      
+      // Step 4: Z=70 (Blocked by H1_MID) - Vertical Pin
+      Strip(id: 'V2_LEFT', points: [Offset(250, 50), Offset(250, 950)], width: w, zIndex: 70),
+      
+      // Step 5: Z=60 (Blocked by V2_LEFT) - S-Shape
+      Strip(id: 'HOOK_S1', points: [Offset(350, 250), Offset(150, 250), Offset(150, 750), Offset(700, 750)], width: w, zIndex: 60),
+      
+      // Step 6: Z=50 (Blocked by HOOK_S1) - Horizontal Pin
+      Strip(id: 'H2_BOT', points: [Offset(950, 650), Offset(50, 650)], width: w, zIndex: 50),
+      
+      // Step 7: Z=40 (Blocked by H2_BOT) - Vertical Pin
+      Strip(id: 'V3_RIGHT', points: [Offset(750, 50), Offset(750, 950)], width: w, zIndex: 40),
+      
+      // Step 8: Z=30 (Blocked by V3_RIGHT) - Large U-Shape
+      Strip(id: 'HOOK_U2', points: [Offset(850, 50), Offset(650, 50), Offset(650, 850), Offset(850, 850)], width: w, zIndex: 30),
+      
+      // Step 9: Z=20 (Blocked by HOOK_U2) - Horizontal Pin
+      Strip(id: 'H3_TOP', points: [Offset(50, 150), Offset(950, 150)], width: w, zIndex: 20),
+      
+      // Step 10: Z=10 (Blocked by H3_TOP) - Massive L-Shape (Last out)
+      Strip(id: 'HOOK_L1', points: [Offset(50, 150), Offset(50, 850), Offset(550, 850)], width: w, zIndex: 10),
     ];
 
     final crossings = _calculateCrossings(strips);
     return PuzzleLevel(
       levelId: 'level_12',
-      metadata: LevelMetadata(difficulty: 12, stripCount: 5, crossingCount: crossings.length, gridType: 'production_12'),
+      metadata: LevelMetadata(difficulty: 12, stripCount: 10, crossingCount: crossings.length, gridType: 'labyrinth_trap'),
       strips: strips,
       crossings: crossings,
     );
