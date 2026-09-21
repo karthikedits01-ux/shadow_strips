@@ -1,11 +1,13 @@
 import 'dart:math' as math;
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../logic/level_repository.dart';
 import '../models/strip.dart';
 
 class LevelCompletedOverlay extends StatelessWidget {
   final int nextLevelNum;
+  final int starsEarned;
   final VoidCallback onNextLevel;
   final VoidCallback onRetry;
   final VoidCallback onLevels;
@@ -13,6 +15,7 @@ class LevelCompletedOverlay extends StatelessWidget {
   const LevelCompletedOverlay({
     super.key,
     required this.nextLevelNum,
+    required this.starsEarned,
     required this.onNextLevel,
     required this.onRetry,
     required this.onLevels,
@@ -24,9 +27,9 @@ class LevelCompletedOverlay extends StatelessWidget {
       // We animate a master value from 0.0 to 1.0. 
       // We'll apply different curves manually inside the builder for different elements.
       tween: Tween<double>(begin: 0.0, end: 1.0),
-      duration: const Duration(milliseconds: 1800), 
+      duration: const Duration(milliseconds: 2500), 
       builder: (context, value, child) {
-        final t = value * 1800.0;
+        final t = value * 2500.0;
 
         // 1. Fast Background Blur & UI Entrance (0 to 800ms)
         final uiProgress = (t / 800.0).clamp(0.0, 1.0);
@@ -177,7 +180,21 @@ class LevelCompletedOverlay extends StatelessWidget {
                       ),
                     ),
 
-                    const Spacer(flex: 3),
+                    Expanded(
+                      flex: 3,
+                      child: Center(
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            _StampingStar(t: t, startTime: 1750.0, duration: 350.0, isEarned: starsEarned >= 1),
+                            const SizedBox(width: 16),
+                            _StampingStar(t: t, startTime: 1900.0, duration: 350.0, isEarned: starsEarned >= 2),
+                            const SizedBox(width: 16),
+                            _StampingStar(t: t, startTime: 2050.0, duration: 350.0, isEarned: starsEarned >= 3),
+                          ],
+                        ),
+                      ),
+                    ),
 
                     // Floating Controls
                     Opacity(
@@ -387,3 +404,85 @@ class _MiniMapPainter extends CustomPainter {
     return oldDelegate.strips != strips;
   }
 }
+
+class _StampingStar extends StatefulWidget {
+  final double t;
+  final double startTime;
+  final double duration;
+  final bool isEarned;
+
+  const _StampingStar({
+    required this.t,
+    required this.startTime,
+    required this.duration,
+    required this.isEarned,
+  });
+
+  @override
+  State<_StampingStar> createState() => _StampingStarState();
+}
+
+class _StampingStarState extends State<_StampingStar> {
+  bool _hasImpacted = false;
+
+  @override
+  void didUpdateWidget(covariant _StampingStar oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    
+    final endTime = widget.startTime + widget.duration;
+    if (widget.t >= endTime && oldWidget.t < endTime) {
+      if (!_hasImpacted) {
+        _hasImpacted = true;
+        if (widget.isEarned) {
+          HapticFeedback.heavyImpact();
+        }
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (widget.t < widget.startTime) {
+      return const Opacity(
+        opacity: 0.0,
+        child: SizedBox(width: 48, height: 48),
+      );
+    }
+
+    final progress = ((widget.t - widget.startTime) / widget.duration).clamp(0.0, 1.0);
+    
+    final easeValue = Curves.easeOutBack.transform(progress);
+    
+    final scale = progress < 1.0 
+        ? 3.0 - (2.0 * easeValue)
+        : 1.0;
+        
+    final rotation = progress < 1.0
+        ? 0.3 * (1.0 - easeValue)
+        : 0.0;
+        
+    final opacity = Curves.easeIn.transform(progress).clamp(0.0, 1.0);
+
+    final color = widget.isEarned ? Colors.white : const Color(0xFF3A3A3A);
+    final shadows = widget.isEarned 
+        ? const [Shadow(color: Colors.white54, blurRadius: 16)] 
+        : const <Shadow>[];
+
+    return Transform.scale(
+      scale: scale,
+      child: Transform.rotate(
+        angle: rotation,
+        child: Opacity(
+          opacity: opacity,
+          child: Icon(
+            Icons.star_rounded,
+            color: color,
+            size: 48,
+            shadows: shadows,
+          ),
+        ),
+      ),
+    );
+  }
+}
+

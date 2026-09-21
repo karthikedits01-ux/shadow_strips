@@ -363,6 +363,7 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
                 Positioned.fill(
                   child: LevelCompletedOverlay(
                     nextLevelNum: currentNum + 1,
+                    starsEarned: state.mistakes == 0 ? 3 : (state.mistakes == 1 ? 2 : 1),
                     onNextLevel: () {
                       widget.flowController.loadNextLevel();
                     },
