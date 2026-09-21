@@ -48,10 +48,10 @@ class HitTestEngine {
     final activeStrips = state.activeStrips.values.toList();
     if (activeStrips.isEmpty) return null;
 
-    // Physical touch tolerance buffer: 14.0 physical screen pixels
-    // Converted dynamically to logical units based on effective rendering scale
+    // Greatly expanded touch tolerance for premium UX (30 logical pixels of forgiveness)
+    // Ensures hit targets easily meet the 44x44 Apple HIG standard
     final effectiveScale = physicalScale > 0 ? physicalScale : 1.0;
-    final touchTolerance = (14.0 / effectiveScale).clamp(6.0, 40.0);
+    final touchTolerance = (30.0 / effectiveScale).clamp(20.0, 80.0);
 
     final directHits = <Strip>[];
     final touchHits = <Strip>[];

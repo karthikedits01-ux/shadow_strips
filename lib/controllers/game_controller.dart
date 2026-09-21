@@ -15,15 +15,12 @@ class GameController extends ChangeNotifier {
   late GameState _state;
   late DependencyGraph _graph;
   
-  bool _isInputLocked = false;
-  
   /// Callback when the level is fully completed.
   VoidCallback? onLevelComplete;
   /// Callback when mistakes exceed the allowed limit (default 3).
   VoidCallback? onMistakesExceeded;
 
   GameState get state => _state;
-  bool get isInputLocked => _isInputLocked;
 
   // ignore_for_file: prefer_initializing_formals
   GameController({
@@ -55,13 +52,12 @@ class GameController extends ChangeNotifier {
       drawOrder: drawOrder,
     );
     
-    _isInputLocked = false;
     notifyListeners();
   }
 
   /// Handles a tap on a strip. Returns true if the tap was successful and removal started.
   bool handleTap(String stripId) {
-    if (_isInputLocked || _state.isComplete || _state.isGameOver) return false;
+    if (_state.isComplete || _state.isGameOver) return false;
     
     final stripState = _state.stripStates[stripId];
     if (stripState == null || stripState == StripState.removed || stripState == StripState.removing) {
@@ -81,64 +77,75 @@ class GameController extends ChangeNotifier {
   }
 
   void _startRemoval(String stripId) {
-    _isInputLocked = true;
-    
+    // 1. Update states to trigger animation INSTANTLY on the UI thread
     final updatedStates = Map<String, StripState>.from(_state.stripStates);
     updatedStates[stripId] = StripState.removing;
-    
     _state = _state.copyWith(stripStates: updatedStates);
     
     _hapticService.lightImpact();
     _audioService.playExtractionSuccess();
     
-    notifyListeners();
+    notifyListeners(); // Instant visual feedback
+
+    // 2. Offload complex graph resolution to microtask (Zero-Latency Queueing)
+    Future.microtask(() {
+      _graph.removeNode(stripId);
+      
+      final freeNodes = _graph.getFreeNodes();
+      bool stateChanged = false;
+      final futureStates = Map<String, StripState>.from(_state.stripStates);
+      
+      for (final node in freeNodes) {
+        if (futureStates[node] == StripState.locked) {
+          futureStates[node] = StripState.free;
+          stateChanged = true;
+        }
+      }
+      
+      if (stateChanged) {
+        _state = _state.copyWith(stripStates: futureStates);
+        notifyListeners(); // Unlock underlying strips instantly for rapid-fire
+      }
+    });
   }
 
   void _handleLockedTap(String stripId) {
-    final level = LevelRepository.getLevel(_state.levelId);
-    final maxMistakes = level.metadata.maxMistakes ?? 3;
-    
-    final newMistakes = _state.mistakes + 1;
-    final isGameOver = newMistakes >= maxMistakes;
-    
-    _state = _state.copyWith(
-      mistakes: newMistakes,
-      isGameOver: isGameOver,
-    );
-    
     _hapticService.heavyImpact();
     _audioService.playLockedResistance();
     
-    notifyListeners();
-    
-    if (isGameOver) {
-      onMistakesExceeded?.call();
-    }
+    // Offload score checking and state copying to unblock UI thread
+    Future.microtask(() {
+      final level = LevelRepository.getLevel(_state.levelId);
+      final maxMistakes = level.metadata.maxMistakes ?? 3;
+      
+      final newMistakes = _state.mistakes + 1;
+      final isGameOver = newMistakes >= maxMistakes;
+      
+      _state = _state.copyWith(
+        mistakes: newMistakes,
+        isGameOver: isGameOver,
+      );
+      
+      notifyListeners();
+      
+      if (isGameOver) {
+        onMistakesExceeded?.call();
+      }
+    });
   }
 
   /// Must be called when the visual extraction animation completes.
   /// Commits the removal transaction and updates graph dependencies.
   void commitRemoval(String stripId) {
-    // 1. Remove from logical graph
-    _graph.removeNode(stripId);
-    
-    // 2. Update states
+    // 1. Update state to fully removed
     final updatedStates = Map<String, StripState>.from(_state.stripStates);
     updatedStates[stripId] = StripState.removed;
     
-    // 3. Mark newly free nodes
-    final freeNodes = _graph.getFreeNodes();
-    for (final node in freeNodes) {
-      if (updatedStates[node] == StripState.locked) {
-        updatedStates[node] = StripState.free;
-      }
-    }
-    
-    // 4. Remove from active strips visually
+    // 2. Remove from active strips visually
     final updatedActiveStrips = Map<String, Strip>.from(_state.activeStrips);
     updatedActiveStrips.remove(stripId);
 
-    // 5. Check completion
+    // 3. Check completion
     final isComplete = updatedActiveStrips.isEmpty;
 
     _state = _state.copyWith(
@@ -152,7 +159,6 @@ class GameController extends ChangeNotifier {
       onLevelComplete?.call();
     }
     
-    _isInputLocked = false;
     notifyListeners();
   }
 }

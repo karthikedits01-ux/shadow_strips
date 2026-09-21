@@ -68,7 +68,6 @@ void main() {
       final result = controller.handleTap('A');
 
       expect(result, isTrue);
-      expect(controller.isInputLocked, isTrue);
       expect(controller.state.stripStates['A'], StripState.removing);
     });
 
@@ -89,7 +88,6 @@ void main() {
       final result = controller.handleTap('B');
 
       expect(result, isFalse);
-      expect(controller.isInputLocked, isFalse);
       expect(controller.state.mistakes, 1);
       expect(controller.state.stripStates['B'], StripState.locked);
     });
@@ -111,7 +109,6 @@ void main() {
       controller.handleTap('A');
       controller.commitRemoval('A');
 
-      expect(controller.isInputLocked, isFalse);
       expect(controller.state.stripStates['A'], StripState.removed);
       expect(controller.state.activeStrips.containsKey('A'), isFalse);
       
@@ -127,7 +124,7 @@ void main() {
       expect(controller.state.activeStrips.isEmpty, isTrue);
     });
     
-    test('ignores tap while input is locked', () {
+    test('instantly resolves graph so underlying strips become free before animation completes', () {
       final level = PuzzleLevel(
         levelId: 'test',
         metadata: const LevelMetadata(difficulty: 1, stripCount: 2, crossingCount: 1),
@@ -135,17 +132,22 @@ void main() {
           Strip(id: 'A', points: [Offset(0, 0), Offset(100, 0)], width: 10, zIndex: 0),
           Strip(id: 'B', points: [Offset(0, 0), Offset(0, 100)], width: 10, zIndex: 0),
         ],
-        crossings: [], // both free
+        crossings: [
+          Crossing(upperStripId: 'A', lowerStripId: 'B'),
+        ],
       );
       controller.loadLevel(level);
 
-      controller.handleTap('A');
-      expect(controller.isInputLocked, isTrue);
+      expect(controller.state.stripStates['B'], StripState.locked);
+
+      controller.handleTap('A'); // A is now removing
       
-      final result = controller.handleTap('B'); // B is free, but input is locked
+      expect(controller.state.stripStates['B'], StripState.free); // B is INSTANTLY free
       
-      expect(result, isFalse);
-      expect(controller.state.stripStates['B'], StripState.free); // not removing
+      final result = controller.handleTap('B'); // B is free, and should be instantly tappable
+      
+      expect(result, isTrue);
+      expect(controller.state.stripStates['B'], StripState.removing); // both removing concurrently
     });
   });
 }

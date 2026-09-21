@@ -232,32 +232,6 @@ class LevelRepository {
     );
   }
 
-  /// LEVEL 11: FIRST TRACE (Moved from old Level 2)
-  /// - 4 strips, including 1 bent U-shape.
-  /// - The bent strip is dominant at its head but blocked at its tail.
-  static PuzzleLevel _buildLevel11() {
-    const double w = 40.0;
-    final strips = const [
-      Strip(id: 'FLOOR', points: [Offset(300, 200), Offset(300, 800)], width: w, zIndex: 1),
-      Strip(id: 'BENT', points: [Offset(200, 300), Offset(700, 300), Offset(700, 700), Offset(200, 700)], width: w, zIndex: 2),
-      Strip(id: 'TRAP', points: [Offset(600, 200), Offset(600, 800)], width: w, zIndex: 3),
-      Strip(id: 'KEY', points: [Offset(500, 400), Offset(800, 400)], width: w, zIndex: 4),
-    ];
-    // BENT crosses FLOOR at (300, 300) and (300, 700). BENT blocks FLOOR.
-    // TRAP crosses BENT at (600, 300) and (600, 700). TRAP blocks BENT.
-    // KEY crosses TRAP at (600, 400). KEY blocks TRAP.
-    
-    // Player might see the big BENT strip dominating FLOOR on the left, but if they tap it, it wiggles because TRAP holds it on the right.
-
-    final crossings = _calculateCrossings(strips);
-    return PuzzleLevel(
-      levelId: 'level_11',
-      metadata: LevelMetadata(difficulty: 3, stripCount: 4, crossingCount: crossings.length, gridType: 'proof_11'),
-      strips: strips,
-      crossings: crossings,
-    );
-  }
-
   /// LEVEL 3: PRODUCTION (DOUBLE ANCHOR) [Replaced with Level 12]
   /// - 5 strips. One continuous bent strip (A) blocked by two independent straight strips (B, C).
   /// - B -> A, C -> A, A -> D, D -> E.
@@ -346,133 +320,105 @@ class LevelRepository {
     );
   }
 
-  /// LEVEL 6: PRODUCTION (MULTIPLE INITIAL CHOICES)
-  /// - 5 straight strips. A -> C, B -> C, C -> E, D -> E.
+  /// LEVEL 6: (Replaced with Level 21)
   static PuzzleLevel _buildLevel6() {
-    const double w = 40.0;
     final strips = const [
-      // E: Horizontal, bottom-right
-      Strip(id: 'E', points: [Offset(300, 500), Offset(800, 500)], width: w, zIndex: 1),
-      // D: Vertical, right
-      Strip(id: 'D', points: [Offset(700, 400), Offset(700, 800)], width: w, zIndex: 2),
-      // C: Vertical, left
-      Strip(id: 'C', points: [Offset(400, 200), Offset(400, 700)], width: w, zIndex: 3),
-      // B: Horizontal, bottom-left
-      Strip(id: 'B', points: [Offset(200, 600), Offset(500, 600)], width: w, zIndex: 4),
-      // A: Horizontal, top-left
-      Strip(id: 'A', points: [Offset(200, 300), Offset(500, 300)], width: w, zIndex: 5),
+      Strip(id: 'S_TOP', points: [Offset(60, 150), Offset(340, 150)], width: 40.0, zIndex: 70),
+      Strip(id: 'S_DIAG_UL', points: [Offset(150, 130), Offset(90, 370)], width: 40.0, zIndex: 60),
+      Strip(id: 'S_DIAG_UR', points: [Offset(250, 130), Offset(310, 370)], width: 40.0, zIndex: 55),
+      Strip(id: 'S_V_UPPER', points: [Offset(200, 130), Offset(200, 370)], width: 40.0, zIndex: 50),
+      Strip(id: 'S_MID', points: [Offset(20, 350), Offset(380, 350)], width: 40.0, zIndex: 40),
+      Strip(id: 'S_OUTER_L', points: [Offset(100, 130), Offset(20, 380), Offset(200, 680)], width: 40.0, zIndex: 30),
+      Strip(id: 'S_OUTER_R', points: [Offset(300, 130), Offset(380, 380), Offset(200, 680)], width: 40.0, zIndex: 20),
     ];
-    // A crosses C at (400, 300) -> A blocks C
-    // B crosses C at (400, 600) -> B blocks C
-    // C crosses E at (400, 500) -> C blocks E
-    // D crosses E at (700, 500) -> D blocks E
 
     final crossings = _calculateCrossings(strips);
     return PuzzleLevel(
       levelId: 'level_6',
-      metadata: LevelMetadata(difficulty: 6, stripCount: 5, crossingCount: crossings.length, gridType: 'production_6'),
+      metadata: LevelMetadata(difficulty: 6, stripCount: strips.length, crossingCount: crossings.length, gridType: 'level_21_override'),
       strips: strips,
       crossings: crossings,
     );
   }
 
-  /// LEVEL 7: PRODUCTION (CHOICE WITH CONSEQUENCE)
-  /// - 6 straight strips. A -> C, B -> C, C -> E, D -> E, B -> F.
+  /// LEVEL 7: (Replaced with Level 18)
   static PuzzleLevel _buildLevel7() {
     const double w = 40.0;
     final strips = const [
-      // F: Vertical, bottom-left
-      Strip(id: 'F', points: [Offset(300, 550), Offset(300, 800)], width: w, zIndex: 1),
-      // E: Horizontal, bottom-right
-      Strip(id: 'E', points: [Offset(300, 500), Offset(800, 500)], width: w, zIndex: 2),
-      // D: Vertical, right
-      Strip(id: 'D', points: [Offset(700, 400), Offset(700, 800)], width: w, zIndex: 3),
-      // C: Vertical, middle
-      Strip(id: 'C', points: [Offset(400, 200), Offset(400, 700)], width: w, zIndex: 4),
-      // B: Horizontal, middle-left
-      Strip(id: 'B', points: [Offset(200, 600), Offset(500, 600)], width: w, zIndex: 5),
-      // A: Horizontal, top-left
-      Strip(id: 'A', points: [Offset(200, 300), Offset(500, 300)], width: w, zIndex: 6),
+      // G (Bottom-Left V, Z=5). Blocked by F.
+      Strip(id: 'G', points: [Offset(100, 300), Offset(100, 450)], width: w, zIndex: 5),
+      // F (Bottom H, Z=6). Deep multi-dependency trap. Blocked by D and E. Blocks G.
+      Strip(id: 'F', points: [Offset(50, 350), Offset(450, 350)], width: w, zIndex: 6),
+      // E (Left L-shape, Z=7). Blocked by B (H-leg) and C (V-leg). Blocks F.
+      Strip(id: 'E', points: [Offset(50, 150), Offset(200, 150), Offset(200, 400)], width: w, zIndex: 7),
+      // D (Far Right V, Z=8). Blocked by A. Blocks F.
+      Strip(id: 'D', points: [Offset(450, 50), Offset(450, 450)], width: w, zIndex: 8),
+      // C (Right L-shape, Z=8). Blocked by A. Blocks E's V-leg.
+      Strip(id: 'C', points: [Offset(350, 50), Offset(350, 250), Offset(200, 250)], width: w, zIndex: 8),
+      // B (Top-Left V, Z=8). Blocked by A. Blocks E's H-leg.
+      Strip(id: 'B', points: [Offset(100, 50), Offset(100, 250)], width: w, zIndex: 8),
+      // A (Top H, Z=9). ONLY FREE STRIP. Blocks B, C, D.
+      Strip(id: 'A', points: [Offset(50, 100), Offset(450, 100)], width: w, zIndex: 9),
     ];
-    // A crosses C at (400, 300) -> A blocks C
-    // B crosses C at (400, 600) -> B blocks C
-    // C crosses E at (400, 500) -> C blocks E
-    // D crosses E at (700, 500) -> D blocks E
-    // B crosses F at (300, 600) -> B blocks F
 
     final crossings = _calculateCrossings(strips);
     return PuzzleLevel(
       levelId: 'level_7',
-      metadata: LevelMetadata(difficulty: 7, stripCount: 6, crossingCount: crossings.length, gridType: 'production_7'),
+      metadata: LevelMetadata(difficulty: 7, stripCount: 7, crossingCount: crossings.length, gridType: 'level_18_override'),
       strips: strips,
       crossings: crossings,
     );
   }
 
-  /// LEVEL 8: PRODUCTION (TWO BRANCHES, ONE MERGE)
-  /// - 6 straight strips. A -> C, B -> C, D -> E, C -> F, E -> F.
+  /// LEVEL 8: (Replaced with Level 20)
   static PuzzleLevel _buildLevel8() {
     const double w = 40.0;
     final strips = const [
-      // F: Horizontal, bottom
-      Strip(id: 'F', points: [Offset(200, 650), Offset(800, 650)], width: w, zIndex: 1),
-      // E: Vertical, right
-      Strip(id: 'E', points: [Offset(650, 400), Offset(650, 800)], width: w, zIndex: 2),
-      // D: Horizontal, middle-right
-      Strip(id: 'D', points: [Offset(500, 500), Offset(800, 500)], width: w, zIndex: 3),
-      // C: Vertical, left
-      Strip(id: 'C', points: [Offset(350, 200), Offset(350, 800)], width: w, zIndex: 4),
-      // B: Horizontal, middle-left
-      Strip(id: 'B', points: [Offset(200, 450), Offset(500, 450)], width: w, zIndex: 5),
-      // A: Horizontal, top-left
-      Strip(id: 'A', points: [Offset(200, 300), Offset(500, 300)], width: w, zIndex: 6),
+      Strip(id: 'S_HTOP', points: [Offset(40, 180), Offset(200, 180)], width: w, zIndex: 1),
+      Strip(id: 'S_V2', points: [Offset(180, 80), Offset(180, 560), Offset(260, 560)], width: w, zIndex: 2),
+      Strip(id: 'S_HMAIN', points: [Offset(40, 240), Offset(360, 240)], width: w, zIndex: 3),
+      Strip(id: 'S_V3', points: [Offset(300, 80), Offset(300, 340), Offset(100, 340)], width: w, zIndex: 4),
+      Strip(id: 'S_V1', points: [Offset(120, 80), Offset(120, 500), Offset(360, 500)], width: w, zIndex: 5),
     ];
-    // A crosses C at (350, 300) -> A blocks C
-    // B crosses C at (350, 450) -> B blocks C
-    // D crosses E at (650, 500) -> D blocks E
-    // C crosses F at (350, 650) -> C blocks F
-    // E crosses F at (650, 650) -> E blocks F
 
     final crossings = _calculateCrossings(strips);
     return PuzzleLevel(
       levelId: 'level_8',
-      metadata: LevelMetadata(difficulty: 8, stripCount: 6, crossingCount: crossings.length, gridType: 'production_8'),
+      metadata: LevelMetadata(difficulty: 8, stripCount: 5, crossingCount: crossings.length, gridType: 'level_20_override'),
       strips: strips,
       crossings: crossings,
     );
   }
 
-  /// LEVEL 9: PRODUCTION (THREE-WAY FINAL LOCK)
-  /// - 7 straight strips. A -> D, B -> D, C -> E, D -> F, E -> F, G -> F.
+  /// LEVEL 9: (Replaced with Custom Image Reference Layout)
+  /// LEVEL 9: (Replaced with Custom Image Reference Layout)
   static PuzzleLevel _buildLevel9() {
     const double w = 40.0;
+    // Map of the FIRST image (1000078992.jpg) which features exactly 4 complex strips:
+    // 1 U-shape and 3 L-shapes with precise overlapping Z-indexes.
     final strips = const [
-      // F: Horizontal, bottom
-      Strip(id: 'F', points: [Offset(200, 700), Offset(800, 700)], width: w, zIndex: 1),
-      // G: Vertical, right
-      Strip(id: 'G', points: [Offset(700, 500), Offset(700, 800)], width: w, zIndex: 2),
-      // E: Vertical, middle
-      Strip(id: 'E', points: [Offset(500, 400), Offset(500, 800)], width: w, zIndex: 3),
-      // D: Vertical, left
-      Strip(id: 'D', points: [Offset(300, 300), Offset(300, 800)], width: w, zIndex: 4),
-      // C: Horizontal, middle
-      Strip(id: 'C', points: [Offset(400, 550), Offset(600, 550)], width: w, zIndex: 5),
-      // B: Horizontal, top-left (lower)
-      Strip(id: 'B', points: [Offset(150, 500), Offset(400, 500)], width: w, zIndex: 6),
-      // A: Horizontal, top-left (upper)
-      Strip(id: 'A', points: [Offset(150, 400), Offset(400, 400)], width: w, zIndex: 7),
+      // Strip 4 (L-shape Left V + Fourth H): Top-most. Solvable first. 
+      // Arrow will auto-orient RIGHT.
+      Strip(id: 'S4_L_LEFT', points: [Offset(250, 100), Offset(250, 600), Offset(700, 600)], width: w, zIndex: 40),
+      
+      // Strip 1 (L-shape Top H + FarRight V): Unlocked after Strip 4. 
+      // Arrow will auto-orient UP (top right corner).
+      Strip(id: 'S1_L_TOP_RIGHT', points: [Offset(100, 200), Offset(700, 200), Offset(700, 100)], width: w, zIndex: 30),
+      
+      // Strip 5 (L-shape Middle V + Fifth H): Unlocked after Strip 1 & 4. 
+      // Arrow will auto-orient RIGHT.
+      Strip(id: 'S5_L_MID', points: [Offset(400, 100), Offset(400, 700), Offset(700, 700)], width: w, zIndex: 20),
+      
+      // The Complex U-Shape (Mid H + U-Turn + Third H): Unlocked last.
+      // Starts top-left, goes right, turns down, turns left, ends bottom-left.
+      // Top-left is slightly further to guarantee Arrow points LEFT.
+      Strip(id: 'S_U_SHAPE', points: [Offset(90, 350), Offset(550, 350), Offset(550, 450), Offset(100, 450)], width: w, zIndex: 10),
     ];
-    // A crosses D at (300, 400) -> A blocks D
-    // B crosses D at (300, 500) -> B blocks D
-    // C crosses E at (500, 550) -> C blocks E
-    // D crosses F at (300, 700) -> D blocks F
-    // E crosses F at (500, 700) -> E blocks F
-    // G crosses F at (700, 700) -> G blocks F
 
     final crossings = _calculateCrossings(strips);
     return PuzzleLevel(
       levelId: 'level_9',
-      metadata: LevelMetadata(difficulty: 9, stripCount: 7, crossingCount: crossings.length, gridType: 'production_9'),
+      metadata: LevelMetadata(difficulty: 9, stripCount: 4, crossingCount: crossings.length, gridType: 'ushape_reference_9'),
       strips: strips,
       crossings: crossings,
     );
@@ -516,6 +462,42 @@ class LevelRepository {
       metadata: LevelMetadata(difficulty: 10, stripCount: 8, crossingCount: crossings.length, gridType: 'production_10'),
       strips: strips,
       crossings: crossings,
+    );
+  }
+
+  static PuzzleLevel _buildLevel11() {
+    const double w = 37.0;
+
+    final strips = [
+      // Outer Ring
+      Strip(id: 'S4', points: [Offset(200, 150), Offset(200, 850)], width: w, zIndex: 130), // V Left
+      Strip(id: 'S1', points: [Offset(150, 200), Offset(850, 200)], width: w, zIndex: 120), // H Top
+      Strip(id: 'S2', points: [Offset(800, 150), Offset(800, 850)], width: w, zIndex: 110), // V Right
+      Strip(id: 'S3', points: [Offset(150, 800), Offset(850, 800)], width: w, zIndex: 100), // H Bottom
+
+      // Inner Ring
+      Strip(id: 'S8', points: [Offset(350, 150), Offset(350, 850)], width: w, zIndex: 90), // V Left-Mid
+      Strip(id: 'S5', points: [Offset(150, 350), Offset(850, 350)], width: w, zIndex: 80), // H Top-Mid
+      Strip(id: 'S6', points: [Offset(650, 150), Offset(650, 850)], width: w, zIndex: 70), // V Right-Mid
+      Strip(id: 'S7', points: [Offset(150, 650), Offset(850, 650)], width: w, zIndex: 60), // H Bottom-Mid
+
+      // Center Hash (Spaced tight-zone)
+      Strip(id: 'S9', points: [Offset(465, 250), Offset(465, 750)], width: w, zIndex: 50), // V Left-Center
+      Strip(id: 'S11', points: [Offset(250, 465), Offset(750, 465)], width: w, zIndex: 40), // H Top-Center
+      Strip(id: 'S10', points: [Offset(535, 250), Offset(535, 750)], width: w, zIndex: 30), // V Right-Center
+      Strip(id: 'S12', points: [Offset(250, 535), Offset(750, 535)], width: w, zIndex: 10), // H Bottom-Center
+
+      // The Lock
+      Strip(id: 'S13', points: [Offset(390, 390), Offset(610, 390), Offset(610, 610)], width: w, zIndex: 20), // L-shape
+    ];
+
+    final crossings = _calculateCrossings(strips);
+
+    return PuzzleLevel(
+      levelId: 'level_11',
+      strips: strips,
+      crossings: crossings,
+      metadata: LevelMetadata(difficulty: 11, stripCount: strips.length, crossingCount: crossings.length, dependencyDepth: 13),
     );
   }
 

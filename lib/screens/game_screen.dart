@@ -219,13 +219,10 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
     );
 
     if (hitStripId != null) {
-      final success = gameController.handleTap(hitStripId);
-      if (!success && !gameController.isInputLocked) {
-        // Only trigger error if not locked out completely by another animation
-        final state = gameController.state.stripStates[hitStripId];
-        if (state == StripState.locked) {
-           _triggerErrorAnimation(hitStripId);
-        }
+      gameController.handleTap(hitStripId);
+      final state = gameController.state.stripStates[hitStripId];
+      if (state == StripState.locked) {
+         _triggerErrorAnimation(hitStripId);
       }
     }
   }
@@ -266,9 +263,16 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
                         minScale: 1.0,
                         maxScale: 2.0, // Strictly max 2x zoom
                         clipBehavior: Clip.none,
-                        child: GestureDetector(
+                        child: Listener(
                           behavior: HitTestBehavior.opaque,
-                          onTapDown: (details) => _handleTapDown(details, size, safeTop, safeBottom),
+                          onPointerDown: (event) {
+                            final details = TapDownDetails(
+                              globalPosition: event.position,
+                              localPosition: event.localPosition,
+                              kind: event.kind,
+                            );
+                            _handleTapDown(details, size, safeTop, safeBottom);
+                          },
                           child: AnimatedBuilder(
                             animation: _tutorialController,
                             builder: (context, child) {
