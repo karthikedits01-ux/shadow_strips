@@ -1,4 +1,6 @@
 import 'dart:math' as math;
+import 'dart:ui' as ui;
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import '../models/game_state.dart';
 import '../models/strip.dart';
@@ -19,6 +21,7 @@ class PuzzlePainter extends CustomPainter {
   final Map<String, double> errorAnimations;
   final PuzzleLevel level;
   final double tutorialPulseValue;
+  final ui.Image? noiseTexture;
 
   PuzzlePainter({
     required this.state,
@@ -30,6 +33,7 @@ class PuzzlePainter extends CustomPainter {
     this.safeAreaTop = 0,
     this.safeAreaBottom = 0,
     this.tutorialPulseValue = 0.0,
+    this.noiseTexture,
   });
 
   @override
@@ -137,51 +141,60 @@ class PuzzlePainter extends CustomPainter {
 
     // 3. Draw Tactile 3D Volume (Layered strokes to simulate 3D gradient along path)
 
-    // Rim light (bottom layer)
-    final rimPaint = Paint()
-      ..color = const Color(0xFF3A3A3C).withAlpha(alpha)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = w + 1.0
-      ..strokeCap = StrokeCap.round
-      ..strokeJoin = StrokeJoin.round;
-    canvas.drawPath(path, rimPaint);
-
-    // Dark edges (outer layer of the tube)
-    final darkPaint = Paint()
-      ..color = const Color(0xFF121212).withAlpha(alpha)
+    // 4. 3D Bevel Highlight (Exclusive to top/left edges)
+    // Drawn offset by (-1, -1). The main fill drawn at (0,0) covers the bottom-right side completely!
+    final highlightPaint = Paint()
+      ..color = const Color(0x66FFFFFF) // Semi-transparent white highlight
       ..style = PaintingStyle.stroke
       ..strokeWidth = w
       ..strokeCap = StrokeCap.round
       ..strokeJoin = StrokeJoin.round;
-    canvas.drawPath(path, darkPaint);
+    canvas.drawPath(path.shift(const Offset(-1.0, -1.0)), highlightPaint);
 
-    // Dynamic colors for Red-Flash Error Feedback
-    Color baseMid = const Color(0xFF1A1A1C);
-    Color baseCenter = const Color(0xFF2C2C2E);
-    if (errorValue > 0) {
-      baseMid = Color.lerp(baseMid, Colors.red[900], errorValue)!;
-      baseCenter = Color.lerp(baseCenter, Colors.redAccent[400], errorValue)!;
+    // 1 & 3. Lightened Base Color with Directional Lighting (Gradient)
+    final Rect bounds = path.getBounds();
+    final LinearGradient gradient = LinearGradient(
+      begin: Alignment.topLeft,
+      end: Alignment.bottomRight,
+      colors: [
+        errorValue > 0 ? Colors.red[400]! : const Color(0xFF5A5A5A), // Lighter Charcoal
+        errorValue > 0 ? Colors.red[900]! : const Color(0xFF353535), // Darker Charcoal
+      ],
+    );
+    final gradientPaint = Paint()
+      ..shader = gradient.createShader(bounds)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = w 
+      ..strokeCap = StrokeCap.round
+      ..strokeJoin = StrokeJoin.round;
+    canvas.drawPath(path, gradientPaint);
+
+    // 2. Enhance Texture Contrast
+    if (noiseTexture != null) {
+      final Float64List matrix = Float64List.fromList([
+        1.0, 0.0, 0.0, 0.0,
+        0.0, 1.0, 0.0, 0.0,
+        0.0, 0.0, 1.0, 0.0,
+        0.0, 0.0, 0.0, 1.0,
+      ]);
+      
+      final noisePaint = Paint()
+        ..shader = ui.ImageShader(
+          noiseTexture!,
+          TileMode.repeated,
+          TileMode.repeated,
+          matrix,
+        )
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = w
+        ..strokeCap = StrokeCap.round
+        ..strokeJoin = StrokeJoin.round
+        ..blendMode = BlendMode.multiply; // Multiply creates strong contrast for the light grey noise
+        
+      canvas.drawPath(path, noisePaint);
     }
 
-    // Mid-light (middle layer)
-    final midPaint = Paint()
-      ..color = baseMid.withAlpha(alpha)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = w * 0.7
-      ..strokeCap = StrokeCap.round
-      ..strokeJoin = StrokeJoin.round;
-    canvas.drawPath(path, midPaint);
-
-    // Highlight (inner center layer)
-    final centerPaint = Paint()
-      ..color = baseCenter.withAlpha(alpha)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = w * 0.3
-      ..strokeCap = StrokeCap.round
-      ..strokeJoin = StrokeJoin.round;
-    canvas.drawPath(path, centerPaint);
-
-    // Draw Premium Arrowhead (Only when not sliding)
+    // Sharp Paper-Cut Arrowhead
     if (removalValue == 0 && strip.points.length >= 2) {
       final head = strip.points.last;
       final preHead = strip.points[strip.points.length - 2];
@@ -189,20 +202,16 @@ class PuzzlePainter extends CustomPainter {
       double dirLen = dir.distance;
       if (dirLen > 0) {
         dir = dir / dirLen;
-        final arrowSize = w * 0.35;
-        // Shift arrowhead slightly back so it doesn't clip the rounded end
-        final arrowTip = head - dir * (w * 0.2); 
-        final p1 = arrowTip - dir * arrowSize + Offset(-dir.dy, dir.dx) * arrowSize;
-        final p3 = arrowTip - dir * arrowSize - Offset(-dir.dy, dir.dx) * arrowSize;
+        final arrowSize = w * 0.45;
+        final arrowTip = head - dir * (w * 0.1); 
+        final p1 = arrowTip - dir * arrowSize + Offset(-dir.dy, dir.dx) * (arrowSize * 0.7);
+        final p3 = arrowTip - dir * arrowSize - Offset(-dir.dy, dir.dx) * (arrowSize * 0.7);
         
-        final arrowPath = Path()..moveTo(p1.dx, p1.dy)..lineTo(arrowTip.dx, arrowTip.dy)..lineTo(p3.dx, p3.dy);
+        final arrowPath = Path()..moveTo(p1.dx, p1.dy)..lineTo(arrowTip.dx, arrowTip.dy)..lineTo(p3.dx, p3.dy)..close();
         
         final arrowPaint = Paint()
-          ..color = errorValue > 0 ? Colors.redAccent[100]!.withAlpha(alpha) : const Color(0xFF6E6E73).withAlpha(alpha)
-          ..style = PaintingStyle.stroke
-          ..strokeWidth = 2.5
-          ..strokeCap = StrokeCap.round
-          ..strokeJoin = StrokeJoin.round;
+          ..color = errorValue > 0 ? Colors.redAccent[100]!.withAlpha(alpha) : const Color(0xFFE5E5EA).withAlpha(alpha)
+          ..style = PaintingStyle.fill;
           
         canvas.drawPath(arrowPath, arrowPaint);
       }

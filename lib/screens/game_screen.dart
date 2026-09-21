@@ -11,6 +11,8 @@ import '../widgets/glass_menu.dart';
 import '../widgets/completion_transition.dart';
 import '../widgets/level_completed_overlay.dart';
 import '../widgets/game_over_overlay.dart';
+import 'dart:ui' as ui;
+import 'package:flutter/services.dart';
 
 class GameScreen extends StatefulWidget {
   final FlowController flowController;
@@ -35,10 +37,13 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
   
   final TransformationController _zoomController = TransformationController();
   final ValueNotifier<bool> _isZoomed = ValueNotifier(false);
+  
+  ui.Image? _noiseTexture;
 
   @override
   void initState() {
     super.initState();
+    _loadNoiseTexture();
     widget.flowController.gameController.addListener(_onGameStateChanged);
     
     _tutorialController = AnimationController(
@@ -56,6 +61,21 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
         _isZoomed.value = isCurrentlyZoomed;
       }
     });
+  }
+
+  Future<void> _loadNoiseTexture() async {
+    try {
+      final ByteData data = await rootBundle.load('assets/noise.png');
+      final bytes = data.buffer.asUint8List();
+      final image = await decodeImageFromList(bytes);
+      if (mounted) {
+        setState(() {
+          _noiseTexture = image;
+        });
+      }
+    } catch (e) {
+      debugPrint("Failed to load noise texture: $e");
+    }
   }
 
   @override
@@ -262,6 +282,7 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
                                   removalAnimations: _removalValues,
                                   errorAnimations: _errorValues,
                                   tutorialPulseValue: isLevel1 ? _tutorialPulse.value : 0.0,
+                                  noiseTexture: _noiseTexture,
                                   safeAreaTop: safeTop,
                                   safeAreaBottom: safeBottom,
                                 ),

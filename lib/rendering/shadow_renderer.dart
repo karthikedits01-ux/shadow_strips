@@ -64,10 +64,10 @@ class ShadowRenderer {
       final casterPath = StripGeometry.buildStripPath(caster);
       final zDiff = (casterZ - receiverZ).toDouble();
       
-      final alpha = (255 * 0.5 * (1.0 - removalValue)).toInt(); // 50% opacity
+      final alpha = (255 * 0.9 * (1.0 - removalValue)).toInt(); // Stronger shadow globally
       if (alpha <= 0) continue;
 
-      final blurRadius = 4.0 + zDiff * 2.0;
+      final blurRadius = 2.0 + zDiff * 2.0; // Sharper shadow globally
 
       final shadowPaint = Paint()
         ..color = Colors.black.withAlpha(alpha)
@@ -77,7 +77,8 @@ class ShadowRenderer {
         ..strokeCap = StrokeCap.round
         ..strokeJoin = StrokeJoin.round;
 
-      // To clip to a stroke, we need to get the filled path of the stroke.
+      canvas.save();
+      canvas.translate(4.0 * zDiff, 4.0 * zDiff); // Sharper directional offset globally
       // Wait, Canvas.clipPath only clips the INSIDE of the path.
       // Since receiverPath is a center-line, clipping by it will clip to 0 pixels!
       // This is a major issue! We must clip to the thickened receiver stroke.
@@ -95,8 +96,6 @@ class ShadowRenderer {
       
       // Let's implement `PuzzlePainter` properly using `SaveLayer`.
       // For now, I'll return without clipping, and I'll rewrite the masking in `PuzzlePainter`.
-      canvas.save();
-      canvas.translate(2.0 * zDiff, 6.0 * zDiff);
       // We removed clipPath because receiverPath is not filled.
       // This will cast shadow everywhere. We will handle masking in `PuzzlePainter`.
       canvas.drawPath(casterPath, shadowPaint);
