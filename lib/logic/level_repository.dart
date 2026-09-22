@@ -466,29 +466,29 @@ class LevelRepository {
   }
 
   static PuzzleLevel _buildLevel11() {
-    const double w = 37.0;
+    const double w = 40.0; // Exact Level 09 thickness
 
     final strips = [
-      // Outer Ring
+      // Outer Ring (Kept at original boundaries 200/800)
       Strip(id: 'S4', points: [Offset(200, 150), Offset(200, 850)], width: w, zIndex: 130), // V Left
       Strip(id: 'S1', points: [Offset(150, 200), Offset(850, 200)], width: w, zIndex: 120), // H Top
       Strip(id: 'S2', points: [Offset(800, 150), Offset(800, 850)], width: w, zIndex: 110), // V Right
       Strip(id: 'S3', points: [Offset(150, 800), Offset(850, 800)], width: w, zIndex: 100), // H Bottom
 
-      // Inner Ring
-      Strip(id: 'S8', points: [Offset(350, 150), Offset(350, 850)], width: w, zIndex: 90), // V Left-Mid
-      Strip(id: 'S5', points: [Offset(150, 350), Offset(850, 350)], width: w, zIndex: 80), // H Top-Mid
-      Strip(id: 'S6', points: [Offset(650, 150), Offset(650, 850)], width: w, zIndex: 70), // V Right-Mid
-      Strip(id: 'S7', points: [Offset(150, 650), Offset(850, 650)], width: w, zIndex: 60), // H Bottom-Mid
+      // Inner Ring (Spaced outwards to 325/675 for breathing room)
+      Strip(id: 'S8', points: [Offset(325, 150), Offset(325, 850)], width: w, zIndex: 90), // V Left-Mid
+      Strip(id: 'S5', points: [Offset(150, 325), Offset(850, 325)], width: w, zIndex: 80), // H Top-Mid
+      Strip(id: 'S6', points: [Offset(675, 150), Offset(675, 850)], width: w, zIndex: 70), // V Right-Mid
+      Strip(id: 'S7', points: [Offset(150, 675), Offset(850, 675)], width: w, zIndex: 60), // H Bottom-Mid
 
-      // Center Hash (Spaced tight-zone)
-      Strip(id: 'S9', points: [Offset(465, 250), Offset(465, 750)], width: w, zIndex: 50), // V Left-Center
-      Strip(id: 'S11', points: [Offset(250, 465), Offset(750, 465)], width: w, zIndex: 40), // H Top-Center
-      Strip(id: 'S10', points: [Offset(535, 250), Offset(535, 750)], width: w, zIndex: 30), // V Right-Center
-      Strip(id: 'S12', points: [Offset(250, 535), Offset(750, 535)], width: w, zIndex: 10), // H Bottom-Center
+      // Center Hash (Spaced to 460/540 for breathing room)
+      Strip(id: 'S9', points: [Offset(460, 250), Offset(460, 750)], width: w, zIndex: 50), // V Left-Center
+      Strip(id: 'S11', points: [Offset(250, 460), Offset(750, 460)], width: w, zIndex: 40), // H Top-Center
+      Strip(id: 'S10', points: [Offset(540, 250), Offset(540, 750)], width: w, zIndex: 30), // V Right-Center
+      Strip(id: 'S12', points: [Offset(250, 540), Offset(750, 540)], width: w, zIndex: 10), // H Bottom-Center
 
-      // The Lock
-      Strip(id: 'S13', points: [Offset(390, 390), Offset(610, 390), Offset(610, 610)], width: w, zIndex: 20), // L-shape
+      // The Lock (Spaced to 400/600 for breathing room)
+      Strip(id: 'S13', points: [Offset(400, 400), Offset(600, 400), Offset(600, 600)], width: w, zIndex: 20), // L-shape
     ];
 
     final crossings = _calculateCrossings(strips);

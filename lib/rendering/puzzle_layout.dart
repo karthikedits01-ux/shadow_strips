@@ -60,8 +60,9 @@ class PuzzleLayout {
       );
     } else if (isAdaptiveScale) {
       // 1. Calculate available playable area
-      final horizontalMargin = 30.0;
-      final verticalMargin = 30.0;
+      // Provide extra safe breathing room specifically requested for Level 11's thicker grid
+      final horizontalMargin = levelId == 'level_11' ? 48.0 : 30.0;
+      final verticalMargin = levelId == 'level_11' ? 48.0 : 30.0;
 
       final maxAllowedWidth = math.max(0.0, playableWidth - horizontalMargin * 2);
       final maxAllowedHeight = math.max(0.0, playableHeight - verticalMargin * 2);
