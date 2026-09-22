@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'app/app.dart';
 import 'controllers/game_controller.dart';
 import 'controllers/flow_controller.dart';
@@ -9,6 +10,8 @@ import 'services/haptic_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  
+  await MobileAds.instance.initialize();
 
   // Set preferred orientations
   await SystemChrome.setPreferredOrientations([
@@ -20,9 +23,12 @@ void main() async {
   SystemChrome.setSystemUIOverlayStyle(
     const SystemUiOverlayStyle(
       statusBarColor: Colors.transparent,
-      statusBarIconBrightness: Brightness.dark,
+      statusBarIconBrightness: Brightness.light, // White icons for Android
+      statusBarBrightness: Brightness.dark, // Dark background for iOS
     ),
   );
+
+
 
   // Initialize services
   final progressService = ProgressService();

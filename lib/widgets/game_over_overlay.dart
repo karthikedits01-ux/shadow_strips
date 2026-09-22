@@ -1,13 +1,14 @@
 import 'package:flutter/material.dart';
+import '../services/ad_manager.dart';
 
 class GameOverOverlay extends StatefulWidget {
   final VoidCallback onRetry;
-  final VoidCallback onMain;
+  final VoidCallback onGetLives;
 
   const GameOverOverlay({
     super.key,
     required this.onRetry,
-    required this.onMain,
+    required this.onGetLives,
   });
 
   @override
@@ -18,10 +19,15 @@ class _GameOverOverlayState extends State<GameOverOverlay> with SingleTickerProv
   late final AnimationController _controller;
   late final Animation<double> _fadeAnimation;
   late final Animation<double> _scaleAnimation;
+  
+  bool _isShowingAd = false;
 
   @override
   void initState() {
     super.initState();
+    // Pre-load the ad as soon as the Game Over screen mounts
+    AdManager().loadRewardedAd();
+    
     _controller = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 600),
@@ -50,6 +56,28 @@ class _GameOverOverlayState extends State<GameOverOverlay> with SingleTickerProv
     super.dispose();
   }
 
+  void _handleGetLives() {
+    if (_isShowingAd) return;
+    
+    setState(() {
+      _isShowingAd = true;
+    });
+
+    AdManager().showRewardedAd(
+      onRewardEarned: () {
+        // Trigger the callback to grant a life
+        widget.onGetLives();
+      },
+      onAdClosed: () {
+        if (mounted) {
+          setState(() {
+            _isShowingAd = false;
+          });
+        }
+      }
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return AnimatedBuilder(
@@ -66,11 +94,11 @@ class _GameOverOverlayState extends State<GameOverOverlay> with SingleTickerProv
                   width: 320,
                   padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
                   decoration: BoxDecoration(
-                    color: Colors.white,
+                    color: const Color(0xFF1C1C1E),
                     borderRadius: BorderRadius.circular(24),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.15),
+                        color: Colors.black.withValues(alpha: 0.5),
                         blurRadius: 20,
                         offset: const Offset(0, 10),
                       ),
@@ -85,7 +113,7 @@ class _GameOverOverlayState extends State<GameOverOverlay> with SingleTickerProv
                         style: TextStyle(
                           fontSize: 24,
                           fontWeight: FontWeight.w800,
-                          color: Color(0xFF1A1A1A),
+                          color: Colors.white,
                           letterSpacing: -0.5,
                         ),
                       ),
@@ -100,14 +128,14 @@ class _GameOverOverlayState extends State<GameOverOverlay> with SingleTickerProv
                             width: 100,
                             height: 100,
                             decoration: const BoxDecoration(
-                              color: Color(0xFFF0F4F8),
+                              color: Colors.white10,
                               shape: BoxShape.circle,
                             ),
                             child: const Center(
                               child: Icon(
-                                Icons.favorite_rounded,
+                                Icons.star_rounded,
                                 size: 56,
-                                color: Color(0xFFFF4B4B),
+                                color: Color(0xFFFFC107), // Premium Gold Star
                               ),
                             ),
                           ),
@@ -136,47 +164,53 @@ class _GameOverOverlayState extends State<GameOverOverlay> with SingleTickerProv
                       ),
                       const SizedBox(height: 40),
                       
-                      // Primary Button (Blue)
+                      // Primary Button (Bright White)
                       ElevatedButton(
-                        onPressed: widget.onRetry,
+                        onPressed: _isShowingAd ? null : _handleGetLives,
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF3B82F6),
-                          foregroundColor: Colors.white,
+                          backgroundColor: Colors.white,
+                          foregroundColor: const Color(0xFF1E1E1E), // Dark Charcoal
                           elevation: 0,
                           minimumSize: const Size(double.infinity, 54),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(27),
                           ),
                         ),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: const [
-                            Text(
-                              'Restart Game',
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w700,
-                              ),
+                        child: _isShowingAd 
+                          ? const SizedBox(
+                              width: 24, 
+                              height: 24, 
+                              child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFF1E1E1E))
+                            )
+                          : Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: const [
+                                Text(
+                                  'Get More Lives',
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                                SizedBox(width: 8),
+                                Icon(Icons.play_circle_fill, size: 22),
+                              ],
                             ),
-                            SizedBox(width: 8),
-                            Icon(Icons.refresh_rounded, size: 20),
-                          ],
-                        ),
                       ),
                       const SizedBox(height: 16),
                       
-                      // Secondary Button (Text only)
+                      // Secondary Button (Text only, fading into background)
                       TextButton(
-                        onPressed: widget.onMain,
+                        onPressed: widget.onRetry,
                         style: TextButton.styleFrom(
-                          foregroundColor: const Color(0xFF3B82F6),
+                          foregroundColor: Colors.white54,
                           minimumSize: const Size(double.infinity, 54),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(27),
                           ),
                         ),
                         child: const Text(
-                          'Main Menu',
+                          'Restart Game',
                           style: TextStyle(
                             fontSize: 15,
                             fontWeight: FontWeight.w700,

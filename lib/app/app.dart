@@ -16,9 +16,15 @@ class ShadowStripsApp extends StatelessWidget {
     return MaterialApp(
       title: 'Shadow Strips',
       debugShowCheckedModeBanner: false,
+      themeMode: ThemeMode.dark,
       theme: ThemeData(
         scaffoldBackgroundColor: const Color(0xFFFFFFFF),
         fontFamily: 'Roboto', // Simple clean font fallback
+      ),
+      darkTheme: ThemeData(
+        brightness: Brightness.dark,
+        scaffoldBackgroundColor: const Color(0xFF1E1E1E),
+        fontFamily: 'Roboto',
       ),
       home: ListenableBuilder(
         listenable: flowController,

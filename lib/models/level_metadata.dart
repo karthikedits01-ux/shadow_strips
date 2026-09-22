@@ -11,6 +11,7 @@ class LevelMetadata extends Equatable {
   final String gridType; // e.g., 'symmetric_3x3', 'asymmetric_4x5'
   final int? maxMistakes; // constraint limit (defaults to 3 in controller if null)
   final bool hasHiddenStrips; // introduces hidden mechanic
+  final int comboTimerDuration; // duration in seconds for the combo timer
 
   const LevelMetadata({
     required this.difficulty,
@@ -22,6 +23,7 @@ class LevelMetadata extends Equatable {
     this.gridType = 'symmetric_3x3',
     this.maxMistakes,
     this.hasHiddenStrips = false,
+    this.comboTimerDuration = 10,
   });
 
   @override
@@ -35,5 +37,6 @@ class LevelMetadata extends Equatable {
         gridType,
         maxMistakes,
         hasHiddenStrips,
+        comboTimerDuration,
       ];
 }

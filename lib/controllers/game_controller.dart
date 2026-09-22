@@ -161,4 +161,42 @@ class GameController extends ChangeNotifier {
     
     notifyListeners();
   }
+
+  /// Called when the combo timer reaches zero.
+  /// Deducts a star, triggers haptic impact, but does NOT play audio penalty.
+  void applyTimerPenalty() {
+    if (_state.isComplete || _state.isGameOver) return;
+    
+    _hapticService.heavyImpact(); // Visual deduction and haptics ONLY
+    
+    Future.microtask(() {
+      final level = LevelRepository.getLevel(_state.levelId);
+      final maxMistakes = level.metadata.maxMistakes ?? 3;
+      
+      final newMistakes = _state.mistakes + 1;
+      final isGameOver = newMistakes >= maxMistakes;
+      
+      _state = _state.copyWith(
+        mistakes: newMistakes,
+        isGameOver: isGameOver,
+      );
+      
+      notifyListeners();
+      
+      if (isGameOver) {
+        onMistakesExceeded?.call();
+      }
+    });
+  }
+
+  /// Grants a life by reducing mistakes by 1 and un-setting isGameOver.
+  void grantLife() {
+    if (_state.mistakes > 0) {
+      _state = _state.copyWith(
+        mistakes: _state.mistakes - 1,
+        isGameOver: false,
+      );
+      notifyListeners();
+    }
+  }
 }

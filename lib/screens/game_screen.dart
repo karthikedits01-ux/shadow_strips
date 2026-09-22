@@ -11,6 +11,7 @@ import '../widgets/glass_menu.dart';
 import '../widgets/completion_transition.dart';
 import '../widgets/level_completed_overlay.dart';
 import '../widgets/game_over_overlay.dart';
+import '../widgets/combo_timer_bar.dart';
 import 'dart:ui' as ui;
 import 'package:flutter/services.dart';
 
@@ -31,6 +32,9 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
   final Map<String, double> _errorValues = {};
 
   bool _isMenuOpen = false;
+  
+  final GlobalKey<ComboTimerBarState> _comboTimerKey = GlobalKey<ComboTimerBarState>();
+  bool _hasStartedInteraction = false;
 
   late final AnimationController _tutorialController;
   late final Animation<double> _tutorialPulse;
@@ -95,6 +99,21 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
 
   void _onGameStateChanged() {
     final state = widget.flowController.gameController.state;
+    final level = LevelRepository.getLevel(state.levelId);
+    
+    // STRICT STATE RESET ON LOAD:
+    // If we transition to a new level (or a retry resets the state to pristine)
+    final hasActiveActions = state.stripStates.values.any(
+        (s) => s == StripState.removing || s == StripState.removed);
+    
+    if (!hasActiveActions && state.activeStrips.length == level.strips.length && state.mistakes == 0) {
+      _hasStartedInteraction = false;
+      _comboTimerKey.currentState?.resetTimer(); // Guarantee timer is stopped and full
+    }
+    
+    if (state.isComplete || state.isGameOver) {
+      _comboTimerKey.currentState?.stopTimer();
+    }
 
     // Cleanup controllers for strips that are no longer in 'removing' or 'locked' states (e.g. on reset)
     final removingKeys = _removalControllers.keys.toList();
@@ -219,19 +238,35 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
     );
 
     if (hitStripId != null) {
-      gameController.handleTap(hitStripId);
-      final state = gameController.state.stripStates[hitStripId];
-      if (state == StripState.locked) {
-         _triggerErrorAnimation(hitStripId);
+      final success = gameController.handleTap(hitStripId);
+      
+      if (success) {
+        if (!_hasStartedInteraction) {
+          _hasStartedInteraction = true;
+          _comboTimerKey.currentState?.startTimer(); // Starts the 10-second countdown
+        } else {
+          _comboTimerKey.currentState?.addBonus(); // Adds the +25% time bonus for subsequent pulls
+        }
+      } else {
+        final state = gameController.state.stripStates[hitStripId];
+        if (state == StripState.locked) {
+           _triggerErrorAnimation(hitStripId);
+        }
       }
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.white, // Pure white background
-      body: ListenableBuilder(
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: SystemUiOverlayStyle.dark.copyWith(
+        statusBarColor: Colors.transparent,
+        statusBarIconBrightness: Brightness.dark, // Black icons for light background
+        statusBarBrightness: Brightness.light,
+      ),
+      child: Scaffold(
+        backgroundColor: Colors.white, // Pure white background
+        body: ListenableBuilder(
         listenable: widget.flowController.gameController,
         builder: (context, _) {
           final state = widget.flowController.gameController.state;
@@ -308,6 +343,11 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
                 child: HudOverlay(
                   levelId: state.levelId,
                   mistakes: state.mistakes,
+                  comboTimerKey: _comboTimerKey,
+                  comboDurationSeconds: level.metadata.comboTimerDuration,
+                  onTimerPenalty: () {
+                    widget.flowController.gameController.applyTimerPenalty();
+                  },
                   onBackTap: () {
                     widget.flowController.goHome();
                   },
@@ -384,17 +424,18 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
               if (state.isGameOver)
                 Positioned.fill(
                   child: GameOverOverlay(
+                    onGetLives: () {
+                      widget.flowController.gameController.grantLife();
+                    },
                     onRetry: () {
                       widget.flowController.resetCurrentLevel();
-                    },
-                    onMain: () {
-                      widget.flowController.goHome();
                     },
                   ),
                 ),
             ],
           );
         },
+      ),
       ),
     );
   }

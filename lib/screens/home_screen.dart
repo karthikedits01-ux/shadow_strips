@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'dart:ui';
 import 'package:intl/intl.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../controllers/flow_controller.dart';
 
 class HomeScreen extends StatelessWidget {
@@ -12,22 +15,34 @@ class HomeScreen extends StatelessWidget {
     final progress = flowController.progressService;
     final currentLevel = progress.currentLevel.replaceAll('level_', '');
 
-    return Scaffold(
-      backgroundColor: const Color(0xFFF8F9FA), // Very light grey/white background
-      body: Stack(
-        children: [
-          // Background shapes
-          Positioned.fill(
-            child: CustomPaint(
-              painter: _BackgroundShapesPainter(),
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: SystemUiOverlayStyle.light.copyWith(
+        statusBarColor: Colors.transparent,
+        statusBarIconBrightness: Brightness.light, // White icons
+        statusBarBrightness: Brightness.dark,
+      ),
+      child: Scaffold(
+        backgroundColor: Colors.black,
+        body: Container(
+          decoration: const BoxDecoration(
+            gradient: RadialGradient(
+              center: Alignment(-0.2, -0.4),
+              radius: 1.5,
+              colors: [Color(0xFF2A2D34), Color(0xFF0D0E12)],
             ),
           ),
-          
-          SafeArea(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                const SizedBox(height: 40),
+        child: Stack(
+          children: [
+            Positioned.fill(
+              child: CustomPaint(
+                painter: _StripsBackgroundPainter(),
+              ),
+            ),
+            SafeArea(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  const SizedBox(height: 80),
                 
                 // Top: Daily Challenge Card
                 Center(
@@ -39,14 +54,30 @@ class HomeScreen extends StatelessWidget {
                 const Spacer(),
                 
                 // Middle: Title
-                const Center(
-                  child: Text(
-                    'Arrow Puzzle',
-                    style: TextStyle(
-                      fontSize: 36,
-                      fontWeight: FontWeight.w800,
-                      color: Color(0xFF2C3E50), // Dark blue/grey
-                      letterSpacing: -0.5,
+                Center(
+                  child: RichText(
+                    text: TextSpan(
+                      style: GoogleFonts.orbitron(
+                        fontSize: 40,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: 2.0,
+                        shadows: [
+                          Shadow(
+                            blurRadius: 15,
+                            color: const Color(0xFF00E5FF).withValues(alpha: 0.3),
+                          ),
+                        ],
+                      ),
+                      children: const [
+                        TextSpan(
+                          text: 'Shadow ',
+                          style: TextStyle(color: Colors.white),
+                        ),
+                        TextSpan(
+                          text: 'Strips',
+                          style: TextStyle(color: Color(0xFF00E5FF)),
+                        ),
+                      ],
                     ),
                   ),
                 ),
@@ -55,7 +86,7 @@ class HomeScreen extends StatelessWidget {
                 
                 // Bottom: New Game Button
                 Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 40.0),
+                  padding: const EdgeInsets.symmetric(horizontal: 24.0),
                   child: _NewGameButton(
                     level: currentLevel,
                     onTap: () => flowController.resumeGame(),
@@ -68,6 +99,7 @@ class HomeScreen extends StatelessWidget {
           ),
         ],
       ),
+      ),
       bottomNavigationBar: _CustomBottomNavBar(
         currentIndex: 0,
         onTap: (index) {
@@ -77,6 +109,7 @@ class HomeScreen extends StatelessWidget {
             flowController.goSettings(); // Assuming 'Me' goes to settings for now
           }
         },
+      ),
       ),
     );
   }
@@ -94,114 +127,93 @@ class _DailyChallengeCard extends StatelessWidget {
 
     return GestureDetector(
       onTap: onTap,
-      child: Container(
-        width: 200,
-        padding: const EdgeInsets.symmetric(vertical: 24.0, horizontal: 16.0),
-        decoration: BoxDecoration(
-          gradient: const LinearGradient(
-            colors: [Color(0xFF64B5F6), Color(0xFF1E88E5)],
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-          ),
-          borderRadius: BorderRadius.circular(16.0),
-          boxShadow: [
-            BoxShadow(
-              color: const Color(0xFF1E88E5).withValues(alpha: 0.3),
-              offset: const Offset(0, 10),
-              blurRadius: 20,
-            ),
-          ],
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            // Calendar Icon
-            Container(
-              width: 50,
-              height: 50,
-              decoration: BoxDecoration(
-                color: const Color(0xFFFFB74D), // Orange/Yellow
-                borderRadius: BorderRadius.circular(12.0),
-                boxShadow: const [
-                   BoxShadow(
-                      color: Colors.black12,
-                      blurRadius: 4,
-                      offset: Offset(0, 2),
-                   ),
-                ]
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(24.0),
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 15.0, sigmaY: 15.0),
+          child: Container(
+            width: 200,
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(24.0),
+              gradient: const LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [Colors.white24, Colors.transparent],
               ),
-              child: Stack(
+            ),
+            padding: const EdgeInsets.all(1.5),
+            child: Container(
+              padding: const EdgeInsets.symmetric(vertical: 24.0, horizontal: 16.0),
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.03),
+                borderRadius: BorderRadius.circular(22.5),
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  // White top bar
-                  Positioned(
-                    top: 0,
-                    left: 0,
-                    right: 0,
-                    height: 12,
-                    child: Container(
-                      decoration: const BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.vertical(top: Radius.circular(12.0)),
-                      ),
-                      child: const Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                        children: [
-                          CircleAvatar(radius: 2, backgroundColor: Colors.grey),
-                          CircleAvatar(radius: 2, backgroundColor: Colors.grey),
-                        ],
-                      ),
+                  // Glowing Calendar Icon
+                  Container(
+                    padding: const EdgeInsets.all(12.0),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF00E5FF).withValues(alpha: 0.1),
+                      shape: BoxShape.circle,
+                      boxShadow: [
+                        BoxShadow(
+                          color: const Color(0xFF00E5FF).withValues(alpha: 0.4),
+                          blurRadius: 15,
+                          spreadRadius: 2,
+                        ),
+                      ],
+                    ),
+                    child: const Icon(
+                      Icons.calendar_month_rounded,
+                      size: 32,
+                      color: Color(0xFF00E5FF),
                     ),
                   ),
-                  // Star inside
-                  const Center(
-                    child: Padding(
-                      padding: EdgeInsets.only(top: 8.0),
-                      child: Icon(Icons.star_rounded, color: Colors.white, size: 28),
+                  const SizedBox(height: 20),
+                  
+                  // Text
+                  const Text(
+                    'DAILY CHALLENGE',
+                    style: TextStyle(
+                      color: Colors.white, // Pure White
+                      fontSize: 10,
+                      fontWeight: FontWeight.w600,
+                      letterSpacing: 1.2,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    dateString,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  
+                  // Play Button
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.2), // Semi-transparent white
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: const Text(
+                      'Play',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                   ),
                 ],
               ),
             ),
-            const SizedBox(height: 20),
-            
-            // Text
-            const Text(
-              'DAILY CHALLENGE',
-              style: TextStyle(
-                color: Color(0xFFBBDEFB), // Light blue text
-                fontSize: 10,
-                fontWeight: FontWeight.w600,
-                letterSpacing: 1.2,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              dateString,
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            const SizedBox(height: 24),
-            
-            // Play Button
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
-              decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.2), // Semi-transparent white
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: const Text(
-                'Play',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ),
-          ],
+          ),
         ),
       ),
     );
@@ -217,12 +229,14 @@ class _NewGameButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
+      width: double.infinity,
+      height: 64.0,
       decoration: BoxDecoration(
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF1E88E5).withValues(alpha: 0.3),
-            offset: const Offset(0, 8),
-            blurRadius: 16,
+            color: Colors.white.withValues(alpha: 0.1),
+            blurRadius: 20,
+            spreadRadius: 2,
           ),
         ],
         borderRadius: BorderRadius.circular(40),
@@ -230,32 +244,46 @@ class _NewGameButton extends StatelessWidget {
       child: ElevatedButton(
         onPressed: onTap,
         style: ElevatedButton.styleFrom(
-          backgroundColor: const Color(0xFF2196F3),
-          foregroundColor: Colors.white,
+          backgroundColor: Colors.white,
+          foregroundColor: const Color(0xFF121212),
           elevation: 0,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(40),
           ),
-          padding: const EdgeInsets.symmetric(vertical: 16),
-          minimumSize: const Size(double.infinity, 0),
+          padding: EdgeInsets.zero,
         ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Text(
-              'New Game',
-              style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-              ),
+            const Icon(
+              Icons.play_arrow_rounded,
+              color: Color(0xFF121212),
+              size: 28,
             ),
-            Text(
-              'Level $level',
-              style: TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w500,
-                color: Colors.white.withValues(alpha: 0.7),
-              ),
+            const SizedBox(width: 8),
+            Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'New Game',
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: 1.0,
+                    color: Color(0xFF121212),
+                  ),
+                ),
+                Text(
+                  'Level $level',
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: const Color(0xFF121212),
+                    letterSpacing: 1.0,
+                  ),
+                ),
+              ],
             ),
           ],
         ),
@@ -277,9 +305,9 @@ class _CustomBottomNavBar extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       decoration: const BoxDecoration(
-        color: Colors.white,
+        color: Color(0xFF1E1E1E),
         border: Border(
-          top: BorderSide(color: Color(0xFFEEEEEE), width: 1.0),
+          top: BorderSide(color: Colors.white10, width: 1.0),
         ),
       ),
       padding: const EdgeInsets.only(bottom: 24, top: 12),
@@ -325,7 +353,7 @@ class _NavBarItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = isSelected ? const Color(0xFF1E88E5) : const Color(0xFF9E9E9E);
+    final color = isSelected ? Colors.white : Colors.white38;
     
     return GestureDetector(
       onTap: onTap,
@@ -349,52 +377,34 @@ class _NavBarItem extends StatelessWidget {
   }
 }
 
-class _BackgroundShapesPainter extends CustomPainter {
+class _StripsBackgroundPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()
-      ..color = const Color(0xFFF0F2F5) // Very light grey
-      ..style = PaintingStyle.fill;
-
-    // Draw some large abstract rounded triangles/shapes as seen in background
-    // Shape 1: Top left
-    final path1 = Path();
-    path1.moveTo(-50, 0);
-    path1.lineTo(200, 150);
-    path1.lineTo(100, 250);
-    path1.lineTo(-100, 100);
-    path1.close();
-    
-    // Smooth corners for path1 (simplified approach, actual SVG would be better, but this works for abstract shapes)
-    canvas.drawPath(path1, paint);
-
-    // Shape 2: Bottom right
-    final path2 = Path();
-    path2.moveTo(size.width, size.height - 100);
-    path2.lineTo(size.width - 250, size.height - 200);
-    path2.lineTo(size.width - 150, size.height - 50);
-    path2.lineTo(size.width + 50, size.height + 50);
-    path2.close();
-    canvas.drawPath(path2, paint);
-    
-    // Shape 3: Middle right
-    final path3 = Path();
-    path3.moveTo(size.width + 50, 200);
-    path3.lineTo(size.width - 150, 300);
-    path3.lineTo(size.width - 50, 450);
-    path3.close();
-    canvas.drawPath(path3, paint);
-    
-    // Shape 4: Bottom left
-    final path4 = Path();
-    path4.moveTo(-50, size.height - 150);
-    path4.lineTo(150, size.height - 250);
-    path4.lineTo(250, size.height - 100);
-    path4.lineTo(50, size.height);
-    path4.close();
-    canvas.drawPath(path4, paint);
+      ..color = Colors.white.withValues(alpha: 0.03)
+      ..strokeWidth = 2.0
+      ..style = PaintingStyle.stroke;
+      
+    // Draw diagonal strips for texture
+    for (double i = -size.height; i < size.width; i += 60) {
+      canvas.drawLine(
+        Offset(i, 0),
+        Offset(i + size.height, size.height),
+        paint,
+      );
+    }
+    for (double i = -size.height + 30; i < size.width; i += 120) {
+      paint.strokeWidth = 8.0;
+      canvas.drawLine(
+        Offset(i, 0),
+        Offset(i + size.height, size.height),
+        paint,
+      );
+      paint.strokeWidth = 2.0;
+    }
   }
 
   @override
   bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
+

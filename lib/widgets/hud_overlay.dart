@@ -1,10 +1,14 @@
 import 'package:flutter/material.dart';
+import 'combo_timer_bar.dart';
 
 class HudOverlay extends StatelessWidget {
   final String levelId;
   final int mistakes;
   final VoidCallback onBackTap;
   final VoidCallback onSettingsTap;
+  final GlobalKey<ComboTimerBarState>? comboTimerKey;
+  final VoidCallback? onTimerPenalty;
+  final int comboDurationSeconds;
 
   const HudOverlay({
     super.key,
@@ -12,6 +16,9 @@ class HudOverlay extends StatelessWidget {
     required this.mistakes,
     required this.onBackTap,
     required this.onSettingsTap,
+    this.comboTimerKey,
+    this.onTimerPenalty,
+    this.comboDurationSeconds = 10,
   });
 
   @override
@@ -38,7 +45,10 @@ class HudOverlay extends StatelessWidget {
               mainAxisSize: MainAxisSize.min,
               children: [
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+                  constraints: BoxConstraints(
+                    minWidth: MediaQuery.of(context).size.width * 0.45,
+                    maxWidth: MediaQuery.of(context).size.width * 0.45,
+                  ),
                   decoration: BoxDecoration(
                     color: Colors.white,
                     borderRadius: BorderRadius.circular(24),
@@ -50,14 +60,34 @@ class HudOverlay extends StatelessWidget {
                       ),
                     ],
                   ),
-                  child: Text(
-                    'Level $levelNum',
-                    style: const TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w700,
-                      color: Color(0xFF2C3E50),
-                      letterSpacing: 0.5,
-                    ),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+                        child: Text(
+                          'Level $levelNum',
+                          style: const TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w700,
+                            color: Color(0xFF2C3E50),
+                            letterSpacing: 0.5,
+                          ),
+                        ),
+                      ),
+                      if (comboTimerKey != null && onTimerPenalty != null)
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: 2.0, left: 16, right: 16),
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(2.0),
+                            child: ComboTimerBar(
+                              key: comboTimerKey,
+                              durationSeconds: comboDurationSeconds,
+                              onPenalty: onTimerPenalty!,
+                            ),
+                          ),
+                        ),
+                    ],
                   ),
                 ),
                 const SizedBox(height: 12),
